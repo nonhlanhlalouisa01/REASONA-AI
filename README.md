@@ -154,9 +154,7 @@ Reasona AI
 
 Understand the conversation. Understand the human context. Land the message better.
 
-Why I changed the language
 
-I made psychology and behavioural science central to the concept, while keeping Reasona away from psychological profiling of individual customers. That distinction makes the idea much easier to defend from a Responsible AI perspective while preserving what makes your competition idea special.
 
 
 
