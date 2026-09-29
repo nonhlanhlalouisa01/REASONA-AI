@@ -12,6 +12,9 @@ Most meeting assistants tell you what was said. Reasona helps answer a different
 
 ## MVP capabilities
 
+The interface uses Reasona's forest-green and cream palette with serif headings, plus a
+matching dark theme. Camera controls share the same styling.
+
 ### Meeting Mirror
 
 Add the intended outcome, customer context, and an authorised transcript. Reasona returns:

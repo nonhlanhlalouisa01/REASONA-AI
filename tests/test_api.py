@@ -29,6 +29,12 @@ def test_index_renders_workspace() -> None:
     assert 'id="vision-tab-camera"' in response.text
     assert 'id="vision-tab-report"' in response.text
     assert "Analysis report" in response.text
+    assert 'href="/static/app.css"' in response.text
+    assert 'src="/static/app.js"' in response.text
+    assert 'aria-label="Open live camera"' in response.text
+    assert "Samples the live video every second" in response.text
+    assert 'id="capture-frame"' not in response.text
+    assert 'id="analyze-still"' not in response.text
     assert response.headers["permissions-policy"] == (
         "camera=(self), microphone=(), geolocation=()"
     )
@@ -125,6 +131,6 @@ def test_vision_analysis_returns_safe_contract() -> None:
         "The participant's head is oriented toward the camera."
     ]
     assert payload["result"]["visibleGestures"] == [
-        "No hand gestures are visible in this still."
+        "No hand gestures are visible in this frame."
     ]
     assert payload["metadata"]["onDeviceFaceCount"] == 1
