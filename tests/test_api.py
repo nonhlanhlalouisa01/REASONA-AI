@@ -26,6 +26,9 @@ def test_index_renders_workspace() -> None:
     assert response.status_code == 200
     assert "Meeting mirror" in response.text
     assert "reasona-ai" in response.text
+    assert 'href="/static/app.css"' in response.text
+    assert 'src="/static/app.js"' in response.text
+    assert 'aria-label="Open live camera"' in response.text
     assert response.headers["permissions-policy"] == (
         "camera=(self), microphone=(), geolocation=()"
     )

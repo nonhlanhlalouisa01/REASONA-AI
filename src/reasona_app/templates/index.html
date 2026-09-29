@@ -70,8 +70,8 @@
       content="Reasona AI helps customer-facing teams understand what mattered and prepare for what comes next."
     >
     <title>Reasona AI | Land the message better</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
-    <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+    <link rel="stylesheet" href="/static/app.css">
+    <script src="/static/app.js" defer></script>
   </head>
   <body
     data-agent-name="{{ agent_name }}"
@@ -135,7 +135,13 @@
             <h1 id="page-title">Meeting mirror</h1>
           </div>
           <div class="topbar__actions">
-            <button class="camera-launch" id="open-camera" type="button">
+            <button
+              class="camera-launch"
+              id="open-camera"
+              type="button"
+              aria-label="Open live camera"
+              title="Open live camera"
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 8h3l1.5-2h7L17 8h3v11H4z"></path>
                 <circle cx="12" cy="13" r="3.5"></circle>
