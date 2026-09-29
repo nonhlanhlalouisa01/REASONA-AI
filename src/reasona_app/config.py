@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     foundry_agent_version: str = "2"
     foundry_timeout_seconds: float = Field(default=120.0, ge=10.0, le=300.0)
     max_transcript_characters: int = Field(default=60_000, ge=5_000, le=200_000)
+    max_image_bytes: int = Field(default=4_000_000, ge=100_000, le=10_000_000)
 
     @field_validator("foundry_project_endpoint")
     @classmethod
@@ -41,4 +42,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

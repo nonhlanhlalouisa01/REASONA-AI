@@ -20,13 +20,59 @@
   const resultActions = document.querySelector("#result-actions");
   const submitButton = document.querySelector("#submit-analysis");
   const submitLabel = document.querySelector("#submit-label");
+  const visionDialog = document.querySelector("#vision-dialog");
+  const cameraVideo = document.querySelector("#camera-video");
+  const faceOverlay = document.querySelector("#face-overlay");
+  const capturedImage = document.querySelector("#captured-image");
+  const cameraPlaceholder = document.querySelector("#camera-placeholder");
+  const cameraMessage = document.querySelector("#camera-message");
+  const faceStatus = document.querySelector("#face-status");
+  const startCameraButton = document.querySelector("#start-camera");
+  const captureFrameButton = document.querySelector("#capture-frame");
+  const retakeFrameButton = document.querySelector("#retake-frame");
+  const stopCameraButton = document.querySelector("#stop-camera");
+  const liveAnalysisConsent = document.querySelector("#live-analysis-consent");
+  const toggleLiveAnalysisButton = document.querySelector("#toggle-live-analysis");
+  const liveAnalysisStatus = document.querySelector("#live-analysis-status");
+  const liveAnalysisIndicator = document.querySelector("#live-analysis-indicator");
+  const captureConsent = document.querySelector("#capture-consent");
+  const visionConsent = document.querySelector("#vision-consent");
+  const analyzeStillButton = document.querySelector("#analyze-still");
+  const visionResultEmpty = document.querySelector("#vision-result-empty");
+  const visionResultLoading = document.querySelector("#vision-result-loading");
+  const visionResultError = document.querySelector("#vision-result-error");
+  const visionResult = document.querySelector("#vision-result");
   const maxTranscriptCharacters = Number(body.dataset.maxTranscriptCharacters || 60000);
 
   const state = {
     mode: "reflect",
     lastResponse: null,
     loadingTimer: null,
+    camera: {
+      stream: null,
+      detector: null,
+      animationFrame: null,
+      detectionPending: false,
+      lastDetectionAt: 0,
+      faceCount: null,
+      capturedFaceCount: null,
+      imageDataUrl: null,
+      contextNote: null,
+      liveAnalysisEnabled: false,
+      liveAnalysisTimer: null,
+      liveAnalysisControllers: new Set(),
+      liveAnalysisSequence: 0,
+      latestVisionSequence: 0,
+    },
   };
+
+  const MEDIAPIPE_MODULE_URL =
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs";
+  const MEDIAPIPE_WASM_URL =
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
+  const FACE_DETECTOR_MODEL_URL =
+    "https://storage.googleapis.com/mediapipe-models/face_detector/" +
+    "blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
 
   const copy = {
     reflect: {
@@ -600,6 +646,542 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     }
   }
 
+  function showVisionState(target) {
+    [visionResultEmpty, visionResultLoading, visionResultError, visionResult].forEach((node) => {
+      node.hidden = node !== target;
+    });
+  }
+
+  function clearVisionResult() {
+    state.camera.contextNote = null;
+    document.querySelector("#use-vision-context").disabled = false;
+    document.querySelector("#use-vision-context").textContent =
+      "Add safe note to customer context";
+    showVisionState(visionResultEmpty);
+  }
+
+  function updateFaceStatus(count, label) {
+    state.camera.faceCount = count;
+    faceStatus.classList.toggle("is-live", Number.isInteger(count));
+    if (label) {
+      faceStatus.textContent = label;
+      return;
+    }
+    if (!Number.isInteger(count)) {
+      faceStatus.textContent = "Detecting faces...";
+      return;
+    }
+    faceStatus.textContent = `${count} ${count === 1 ? "face" : "faces"} visible`;
+  }
+
+  function clearFaceOverlay() {
+    const context = faceOverlay.getContext("2d");
+    context?.clearRect(0, 0, faceOverlay.width, faceOverlay.height);
+  }
+
+  function drawFaceBoxes(boxes) {
+    const width = cameraVideo.videoWidth;
+    const height = cameraVideo.videoHeight;
+    if (!width || !height) return;
+
+    if (faceOverlay.width !== width || faceOverlay.height !== height) {
+      faceOverlay.width = width;
+      faceOverlay.height = height;
+    }
+
+    const context = faceOverlay.getContext("2d");
+    if (!context) return;
+    context.clearRect(0, 0, width, height);
+    context.strokeStyle = getComputedStyle(document.documentElement)
+      .getPropertyValue("--cp-accent")
+      .trim();
+    context.lineWidth = Math.max(3, Math.round(width / 320));
+
+    boxes.forEach((box) => {
+      const x = Number(box.originX ?? box.x ?? 0);
+      const y = Number(box.originY ?? box.y ?? 0);
+      const boxWidth = Number(box.width ?? 0);
+      const boxHeight = Number(box.height ?? 0);
+      context.strokeRect(x, y, boxWidth, boxHeight);
+    });
+  }
+
+  async function createOnDeviceFaceDetector() {
+    if ("FaceDetector" in window) {
+      try {
+        const nativeDetector = new window.FaceDetector({
+          fastMode: true,
+          maxDetectedFaces: 20,
+        });
+        return {
+          async detect(video) {
+            const faces = await nativeDetector.detect(video);
+            return faces.map((face) => face.boundingBox);
+          },
+          close() {},
+        };
+      } catch {
+        // Fall through to MediaPipe when the browser advertises but cannot start its detector.
+      }
+    }
+
+    const visionModule = await import(MEDIAPIPE_MODULE_URL);
+    const fileset = await visionModule.FilesetResolver.forVisionTasks(MEDIAPIPE_WASM_URL);
+    const mediaPipeDetector = await visionModule.FaceDetector.createFromOptions(fileset, {
+      baseOptions: {
+        modelAssetPath: FACE_DETECTOR_MODEL_URL,
+        delegate: "GPU",
+      },
+      runningMode: "VIDEO",
+      minDetectionConfidence: 0.55,
+    });
+
+    return {
+      async detect(video, timestamp) {
+        const result = await mediaPipeDetector.detectForVideo(video, timestamp);
+        return result.detections
+          .map((detection) => detection.boundingBox)
+          .filter(Boolean);
+      },
+      close() {
+        mediaPipeDetector.close();
+      },
+    };
+  }
+
+  async function runFaceDetection(timestamp) {
+    if (!state.camera.stream || !state.camera.detector) return;
+
+    const shouldDetect =
+      cameraVideo.readyState >= 2 &&
+      !state.camera.detectionPending &&
+      timestamp - state.camera.lastDetectionAt >= 120;
+
+    if (shouldDetect) {
+      state.camera.detectionPending = true;
+      state.camera.lastDetectionAt = timestamp;
+      try {
+        const boxes = await state.camera.detector.detect(cameraVideo, timestamp);
+        if (!state.camera.stream) return;
+        drawFaceBoxes(boxes);
+        updateFaceStatus(boxes.length);
+      } catch (error) {
+        console.error("On-device face detection stopped", error);
+        clearFaceOverlay();
+        state.camera.detector?.close();
+        state.camera.detector = null;
+        updateFaceStatus(null, "Detector unavailable");
+        cameraMessage.textContent =
+          "The camera is still private and capture is available, but live face boxes could not run.";
+      } finally {
+        state.camera.detectionPending = false;
+      }
+    }
+
+    if (state.camera.stream) {
+      state.camera.animationFrame = window.requestAnimationFrame(runFaceDetection);
+    }
+  }
+
+  function setLiveAnalysisUi(enabled, statusMessage) {
+    toggleLiveAnalysisButton.textContent = enabled
+      ? "Stop live analysis"
+      : "Start live analysis";
+    liveAnalysisIndicator.classList.toggle("is-live", enabled);
+    liveAnalysisStatus.classList.toggle("is-live", enabled);
+    liveAnalysisStatus.textContent =
+      statusMessage ||
+      (enabled
+        ? "Live · sending one frame every five seconds"
+        : "Off · no frames are being sent");
+  }
+
+  function stopLiveAnalysis(statusMessage = "Off · no frames are being sent") {
+    state.camera.liveAnalysisEnabled = false;
+    if (state.camera.liveAnalysisTimer) {
+      window.clearInterval(state.camera.liveAnalysisTimer);
+      state.camera.liveAnalysisTimer = null;
+    }
+    state.camera.liveAnalysisControllers.forEach((controller) => controller.abort());
+    state.camera.liveAnalysisControllers.clear();
+    setLiveAnalysisUi(false, statusMessage);
+    toggleLiveAnalysisButton.disabled =
+      !state.camera.stream || !liveAnalysisConsent.checked;
+  }
+
+  async function runLiveAnalysisCycle() {
+    if (
+      !state.camera.liveAnalysisEnabled ||
+      !state.camera.stream
+    ) {
+      return;
+    }
+
+    if (state.camera.liveAnalysisControllers.size >= 3) {
+      liveAnalysisStatus.textContent =
+        "Live · Foundry is catching up; the next frame will retry in five seconds";
+      return;
+    }
+
+    const sequence = ++state.camera.liveAnalysisSequence;
+    liveAnalysisStatus.textContent = `Live · sending frame ${sequence} to Foundry...`;
+    if (visionResult.hidden) {
+      showVisionState(visionResultLoading);
+    }
+
+    let controller = null;
+    try {
+      const imageDataUrl = captureCurrentFrame({ maxWidth: 640, quality: 0.72 });
+      if (!imageDataUrl) {
+        throw {
+          message: "The live camera frame was not ready.",
+          hint: "Keep the camera open and start live analysis again.",
+        };
+      }
+
+      controller = new AbortController();
+      state.camera.liveAnalysisControllers.add(controller);
+      const payload = await requestVisionAnalysis(
+        imageDataUrl,
+        state.camera.faceCount,
+        controller.signal,
+      );
+      if (!state.camera.liveAnalysisEnabled) return;
+
+      if (sequence >= state.camera.latestVisionSequence) {
+        state.camera.latestVisionSequence = sequence;
+        renderVisionAnalysis(payload);
+        const updatedAt = new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+        setLiveAnalysisUi(
+          true,
+          `Live · frame ${sequence} updated ${updatedAt} · sampling every five seconds`,
+        );
+      }
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+      document.querySelector("#vision-error-message").textContent =
+        typeof error?.message === "string"
+          ? error.message
+          : "Reasona could not analyze the live camera frame.";
+      document.querySelector("#vision-error-hint").textContent =
+        typeof error?.hint === "string"
+          ? error.hint
+          : "Check the Foundry connection and start live analysis again.";
+      showVisionState(visionResultError);
+      stopLiveAnalysis("Stopped · live analysis encountered an error");
+    } finally {
+      if (controller) {
+        state.camera.liveAnalysisControllers.delete(controller);
+      }
+    }
+  }
+
+  function startLiveAnalysis() {
+    if (
+      !state.camera.stream ||
+      !liveAnalysisConsent.checked ||
+      state.camera.liveAnalysisEnabled
+    ) {
+      return;
+    }
+
+    state.camera.liveAnalysisEnabled = true;
+    state.camera.liveAnalysisSequence = 0;
+    state.camera.latestVisionSequence = 0;
+    setLiveAnalysisUi(true, "Live · preparing the first Foundry observation...");
+    runLiveAnalysisCycle();
+    state.camera.liveAnalysisTimer = window.setInterval(runLiveAnalysisCycle, 5000);
+  }
+
+  function stopLiveCamera({ closeDetector = true } = {}) {
+    stopLiveAnalysis();
+    if (state.camera.animationFrame) {
+      window.cancelAnimationFrame(state.camera.animationFrame);
+      state.camera.animationFrame = null;
+    }
+    state.camera.stream?.getTracks().forEach((track) => track.stop());
+    state.camera.stream = null;
+    cameraVideo.srcObject = null;
+    state.camera.detectionPending = false;
+    clearFaceOverlay();
+
+    if (closeDetector) {
+      state.camera.detector?.close();
+      state.camera.detector = null;
+    }
+    toggleLiveAnalysisButton.disabled = true;
+  }
+
+  function resetCapturedStill() {
+    state.camera.imageDataUrl = null;
+    state.camera.capturedFaceCount = null;
+    capturedImage.removeAttribute("src");
+    capturedImage.hidden = true;
+    captureConsent.hidden = true;
+    visionConsent.checked = false;
+    analyzeStillButton.disabled = true;
+  }
+
+  function resetCameraWorkspace() {
+    stopLiveCamera();
+    resetCapturedStill();
+    cameraVideo.hidden = true;
+    faceOverlay.hidden = true;
+    cameraPlaceholder.hidden = false;
+    startCameraButton.hidden = false;
+    startCameraButton.disabled = false;
+    captureFrameButton.hidden = true;
+    retakeFrameButton.hidden = true;
+    stopCameraButton.hidden = true;
+    liveAnalysisConsent.checked = false;
+    toggleLiveAnalysisButton.disabled = true;
+    setLiveAnalysisUi(false);
+    updateFaceStatus(null, "Camera off");
+    cameraMessage.textContent =
+      "Live frames remain in this browser and are not sent to the server.";
+    clearVisionResult();
+  }
+
+  async function startCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      updateFaceStatus(null, "Camera unavailable");
+      cameraMessage.textContent =
+        "This browser does not provide secure camera access. Try a current browser on localhost or HTTPS.";
+      return;
+    }
+
+    startCameraButton.disabled = true;
+    clearVisionResult();
+    resetCapturedStill();
+    cameraMessage.textContent = "Requesting camera permission...";
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+      state.camera.stream = stream;
+      cameraVideo.srcObject = stream;
+      await cameraVideo.play();
+
+      cameraPlaceholder.hidden = true;
+      cameraVideo.hidden = false;
+      faceOverlay.hidden = false;
+      startCameraButton.hidden = true;
+      captureFrameButton.hidden = false;
+      stopCameraButton.hidden = false;
+      toggleLiveAnalysisButton.disabled = !liveAnalysisConsent.checked;
+      updateFaceStatus(null);
+      cameraMessage.textContent =
+        "Loading the on-device detector. Live frames are not uploaded.";
+
+      if (!state.camera.detector) {
+        state.camera.detector = await createOnDeviceFaceDetector();
+      }
+      if (!state.camera.stream) {
+        state.camera.detector.close();
+        state.camera.detector = null;
+        return;
+      }
+      cameraMessage.textContent =
+        "Face boxes and counts run on this device. They do not identify anyone.";
+      state.camera.animationFrame = window.requestAnimationFrame(runFaceDetection);
+    } catch (error) {
+      console.error("Camera start failed", error);
+      stopLiveCamera();
+      cameraVideo.hidden = true;
+      faceOverlay.hidden = true;
+      cameraPlaceholder.hidden = false;
+      startCameraButton.hidden = false;
+      stopCameraButton.hidden = true;
+      captureFrameButton.hidden = true;
+      updateFaceStatus(null, "Permission needed");
+      cameraMessage.textContent =
+        error?.name === "NotAllowedError"
+          ? "Camera permission was not granted. No image was captured."
+          : "The camera could not start. Check that another application is not using it.";
+    } finally {
+      startCameraButton.disabled = false;
+    }
+  }
+
+  function captureCurrentFrame({ maxWidth, quality }) {
+    const sourceWidth = cameraVideo.videoWidth;
+    const sourceHeight = cameraVideo.videoHeight;
+    if (!state.camera.stream || !sourceWidth || !sourceHeight) {
+      return null;
+    }
+
+    const targetWidth = Math.min(sourceWidth, maxWidth);
+    const targetHeight = Math.round((sourceHeight / sourceWidth) * targetWidth);
+    const captureCanvas = document.createElement("canvas");
+    captureCanvas.width = targetWidth;
+    captureCanvas.height = targetHeight;
+    const context = captureCanvas.getContext("2d");
+    if (!context) {
+      return null;
+    }
+
+    context.translate(targetWidth, 0);
+    context.scale(-1, 1);
+    context.drawImage(cameraVideo, 0, 0, targetWidth, targetHeight);
+    return captureCanvas.toDataURL("image/jpeg", quality);
+  }
+
+  function captureStill() {
+    const imageDataUrl = captureCurrentFrame({ maxWidth: 1280, quality: 0.84 });
+    if (!imageDataUrl) {
+      cameraMessage.textContent = "Wait for the live camera preview before capturing.";
+      return;
+    }
+
+    state.camera.imageDataUrl = imageDataUrl;
+    state.camera.capturedFaceCount = state.camera.faceCount;
+    capturedImage.src = state.camera.imageDataUrl;
+
+    stopLiveCamera({ closeDetector: false });
+    cameraVideo.hidden = true;
+    faceOverlay.hidden = true;
+    capturedImage.hidden = false;
+    captureFrameButton.hidden = true;
+    stopCameraButton.hidden = true;
+    retakeFrameButton.hidden = false;
+    captureConsent.hidden = false;
+    updateFaceStatus(
+      null,
+      Number.isInteger(state.camera.capturedFaceCount)
+        ? `${state.camera.capturedFaceCount} ${
+            state.camera.capturedFaceCount === 1 ? "face" : "faces"
+          } captured`
+        : "Still captured",
+    );
+    cameraMessage.textContent =
+      "Review the still. It will not leave the browser unless you confirm consent and analyze it.";
+  }
+
+  async function retakeStill() {
+    resetCapturedStill();
+    retakeFrameButton.hidden = true;
+    cameraPlaceholder.hidden = false;
+    updateFaceStatus(null, "Camera off");
+    await startCamera();
+  }
+
+  function stopCamera() {
+    resetCameraWorkspace();
+  }
+
+  function fillVisionList(selector, items) {
+    const target = document.querySelector(selector);
+    const values = Array.isArray(items) && items.length ? items : ["Nothing notable observed."];
+    target.replaceChildren(...values.map((item) => element("li", "", item)));
+  }
+
+  function renderVisionAnalysis(payload) {
+    const result = payload.result;
+    state.camera.contextNote = result.conversationContextNote;
+    document.querySelector("#vision-summary").textContent = result.summary;
+    document.querySelector("#vision-face-count").textContent = result.visibleFaces;
+    document.querySelector("#vision-framing-badge").textContent =
+      `${result.framingQuality} framing`;
+    document.querySelector("#vision-limitations").textContent = result.limitationsNote;
+    fillVisionList("#vision-face-visibility", result.faceVisibility);
+    fillVisionList("#vision-lighting", result.lightingObservations);
+    fillVisionList("#vision-context", result.visibleContext);
+    fillVisionList("#vision-suggestions", result.practicalSuggestions);
+    showVisionState(visionResult);
+    visionResult.focus({ preventScroll: true });
+  }
+
+  async function requestVisionAnalysis(imageDataUrl, detectedFaceCount, signal) {
+    const response = await fetch("/api/vision/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageDataUrl,
+        consentConfirmed: true,
+        detectedFaceCount: Number.isInteger(detectedFaceCount)
+          ? detectedFaceCount
+          : null,
+      }),
+      signal,
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const payload = contentType.includes("application/json") ? await response.json() : null;
+    if (!response.ok) {
+      throw {
+        message: payload?.error?.message || `The service returned HTTP ${response.status}.`,
+        hint: payload?.error?.hint || "Check the approved visual input and try again.",
+      };
+    }
+    return payload;
+  }
+
+  async function analyzeCapturedStill() {
+    if (!state.camera.imageDataUrl || !visionConsent.checked) return;
+
+    analyzeStillButton.disabled = true;
+    showVisionState(visionResultLoading);
+    try {
+      const payload = await requestVisionAnalysis(
+        state.camera.imageDataUrl,
+        state.camera.capturedFaceCount,
+      );
+      renderVisionAnalysis(payload);
+    } catch (error) {
+      document.querySelector("#vision-error-message").textContent =
+        typeof error?.message === "string"
+          ? error.message
+          : "Reasona could not analyze this still.";
+      document.querySelector("#vision-error-hint").textContent =
+        typeof error?.hint === "string"
+          ? error.hint
+          : "Check the Foundry connection and try again.";
+      showVisionState(visionResultError);
+    } finally {
+      analyzeStillButton.disabled = !visionConsent.checked;
+    }
+  }
+
+  function addVisionContext() {
+    if (!state.camera.contextNote) return;
+    const prefix = contextInput.value.trim() ? "\n\n" : "";
+    const addition = `Visual context (approved camera frame): ${state.camera.contextNote}`;
+    const updatedContext = `${contextInput.value.trim()}${prefix}${addition}`;
+    if (updatedContext.length > Number(contextInput.maxLength)) {
+      cameraMessage.textContent =
+        "The safe visual note would exceed the customer context limit. Shorten the existing context first.";
+      return;
+    }
+
+    contextInput.value = updatedContext;
+    const button = document.querySelector("#use-vision-context");
+    button.textContent = "Added to customer context";
+    button.disabled = true;
+    cameraMessage.textContent =
+      "A non-sensitive visual note was added. The captured image itself was not added.";
+  }
+
+  function openCameraDialog() {
+    if (!visionDialog.open) {
+      visionDialog.showModal();
+      startCameraButton.focus();
+    }
+  }
+
+  function closeCameraDialog() {
+    resetCameraWorkspace();
+    visionDialog.close();
+  }
+
   function loadExample() {
     const example = examples[state.mode];
     titleInput.value = example.title;
@@ -637,6 +1219,40 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
   document.querySelector("#retry-analysis").addEventListener("click", submitAnalysis);
   document.querySelector("#download-result").addEventListener("click", downloadResult);
   document.querySelector("#print-result").addEventListener("click", () => window.print());
+  document.querySelector("#open-camera").addEventListener("click", openCameraDialog);
+  document.querySelector("#close-camera").addEventListener("click", closeCameraDialog);
+  startCameraButton.addEventListener("click", startCamera);
+  captureFrameButton.addEventListener("click", captureStill);
+  retakeFrameButton.addEventListener("click", retakeStill);
+  stopCameraButton.addEventListener("click", stopCamera);
+  toggleLiveAnalysisButton.addEventListener("click", () => {
+    if (state.camera.liveAnalysisEnabled) {
+      stopLiveAnalysis();
+    } else {
+      startLiveAnalysis();
+    }
+  });
+  liveAnalysisConsent.addEventListener("change", () => {
+    if (!liveAnalysisConsent.checked) {
+      stopLiveAnalysis("Stopped · consent was withdrawn");
+      return;
+    }
+    toggleLiveAnalysisButton.disabled = !state.camera.stream;
+  });
+  analyzeStillButton.addEventListener("click", analyzeCapturedStill);
+  document.querySelector("#use-vision-context").addEventListener("click", addVisionContext);
+  visionConsent.addEventListener("change", () => {
+    analyzeStillButton.disabled = !visionConsent.checked || !state.camera.imageDataUrl;
+  });
+  visionDialog.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeCameraDialog();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && state.camera.liveAnalysisEnabled) {
+      stopLiveAnalysis("Paused · tab is not visible");
+    }
+  });
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     submitAnalysis();

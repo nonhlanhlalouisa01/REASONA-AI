@@ -32,14 +32,37 @@ Add the next meeting goal, known context, previous notes, and explicit concerns.
 - research to complete and communication watchouts; and
 - clear success outcomes for the meeting.
 
+### Camera Vision
+
+Open **Camera vision** to:
+
+- see a live face count and framing boxes that run in the browser;
+- explicitly enable live Foundry observations, sampled at one current frame every five seconds;
+- capture a still only when the user chooses;
+- require confirmation that visible people agreed before either live or still-image analysis;
+- receive non-biometric observations about face count, framing, lighting, occlusion, and visible
+  meeting context; and
+- add only a safe text note to customer context.
+
+The live detector does not identify people and does not upload frames. The browser downloads the
+pinned MediaPipe Tasks Vision library from jsDelivr and Google's face-detection model when the
+camera starts; detection then runs locally. If the user separately enables **Start live analysis**,
+the browser sends one current frame to Microsoft Foundry every five seconds until stopped. Live
+analysis stops when consent is withdrawn, the camera workspace closes, or the tab is hidden. A
+captured still is sent only after the user confirms consent and selects
+**Analyze approved still**.
+
 ## Responsible by design
 
 Reasona supports human judgement; it does not replace it. The application:
 
 - uses authorised content supplied by the user;
 - does not persist meeting content or analysis;
+- clears the camera stream and captured still from browser state when the camera workspace closes;
 - treats transcripts and notes as untrusted evidence, not instructions;
-- does not infer hidden emotions, personality, honesty, intelligence, mental health, or private intent;
+- does not perform face recognition or create biometric templates;
+- does not infer hidden emotions, attention, personality, honesty, intelligence, mental health,
+  demographics, or private intent;
 - labels interpretations cautiously and requires observable evidence; and
 - fails explicitly when the Foundry agent is unavailable or returns an invalid structure.
 
@@ -51,7 +74,9 @@ meeting history.
 ```text
 Browser
   │
-  │  JSON over HTTPS
+  ├─ on-device MediaPipe face detection (live frames remain local)
+  │
+  │  JSON over HTTPS (text or one explicitly approved still)
   ▼
 FastAPI application
   ├─ Pydantic request and response contracts
@@ -121,6 +146,7 @@ mypy
 | `FOUNDRY_AGENT_VERSION` | Expected active version shown in output metadata | `2` |
 | `FOUNDRY_TIMEOUT_SECONDS` | Per-analysis SDK timeout | `120` |
 | `MAX_TRANSCRIPT_CHARACTERS` | UI transcript limit | `60000` |
+| `MAX_IMAGE_BYTES` | Decoded still-image limit | `4000000` |
 
 The Foundry agent endpoint routes requests by agent name. `FOUNDRY_AGENT_VERSION` documents the
 expected active version and makes drift visible in every downloaded result.
@@ -143,6 +169,13 @@ endpoint has the Responses protocol enabled. The API intentionally returns an ex
 Inspect the agent trace in Microsoft Foundry. The app rejects malformed or incomplete analysis
 instead of guessing missing evidence.
 
+### Camera does not start
+
+Use `http://127.0.0.1:8000` or HTTPS, grant camera permission when prompted, and close any other
+application that has exclusive control of the camera. If the on-device detector cannot download,
+the app reports that face boxes are unavailable but still allows an explicitly approved still to
+be captured.
+
 ## Collaboration
 
 Use a feature branch for changes, run the validation commands above, and open a pull request against
@@ -151,4 +184,3 @@ Use a feature branch for changes, run the validation commands above, and open a 
 ## License
 
 This project is licensed under the GNU General Public License v3.0. See [LICENSE](./LICENSE).
-

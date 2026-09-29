@@ -36,6 +36,12 @@ class Confidence(StrEnum):
     LOW = "low"
 
 
+class FramingQuality(StrEnum):
+    CLEAR = "clear"
+    ADJUST = "adjust"
+    UNCLEAR = "unclear"
+
+
 class ReflectRequest(ApiModel):
     mode: Literal[AnalysisMode.REFLECT]
     meeting_title: str = Field(min_length=3, max_length=120)
@@ -127,6 +133,24 @@ class PreparationBrief(ApiModel):
 AnalysisResult = ReflectionAnalysis | PreparationBrief
 
 
+class VisionRequest(ApiModel):
+    image_data_url: str = Field(min_length=100, max_length=6_000_000)
+    consent_confirmed: Literal[True]
+    detected_face_count: int | None = Field(default=None, ge=0, le=20)
+
+
+class VisionObservation(ApiModel):
+    summary: str = Field(min_length=20, max_length=1_500)
+    visible_faces: int = Field(ge=0, le=20)
+    framing_quality: FramingQuality
+    face_visibility: list[str] = Field(default_factory=list, max_length=8)
+    lighting_observations: list[str] = Field(default_factory=list, max_length=8)
+    visible_context: list[str] = Field(default_factory=list, max_length=8)
+    practical_suggestions: list[str] = Field(default_factory=list, max_length=8)
+    conversation_context_note: str = Field(min_length=10, max_length=1_000)
+    limitations_note: str = Field(min_length=20, max_length=700)
+
+
 class AnalysisMetadata(ApiModel):
     agent_name: str
     agent_version: str
@@ -137,6 +161,18 @@ class AnalyzeResponse(ApiModel):
     mode: AnalysisMode
     result: AnalysisResult
     metadata: AnalysisMetadata
+
+
+class VisionMetadata(ApiModel):
+    agent_name: str
+    agent_version: str
+    generated_at: str
+    on_device_face_count: int | None = None
+
+
+class VisionResponse(ApiModel):
+    result: VisionObservation
+    metadata: VisionMetadata
 
 
 class HealthResponse(ApiModel):
@@ -154,4 +190,3 @@ class ErrorDetail(ApiModel):
 
 class ErrorResponse(ApiModel):
     error: ErrorDetail
-

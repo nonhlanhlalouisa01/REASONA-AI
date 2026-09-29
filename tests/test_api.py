@@ -1,13 +1,21 @@
 from fastapi.testclient import TestClient
 
 from reasona_app.main import create_app
-from reasona_app.models import AnalyzeRequest, AnalyzeResponse
-from tests.factories import reflection_response
+from reasona_app.models import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    VisionRequest,
+    VisionResponse,
+)
+from tests.factories import reflection_response, vision_response
 
 
 class FakeAnalysisService:
     def analyze(self, _request: AnalyzeRequest) -> AnalyzeResponse:
         return reflection_response()
+
+    def analyze_vision(self, _request: VisionRequest) -> VisionResponse:
+        return vision_response()
 
 
 def test_index_renders_workspace() -> None:
@@ -18,6 +26,10 @@ def test_index_renders_workspace() -> None:
     assert response.status_code == 200
     assert "Meeting mirror" in response.text
     assert "reasona-ai" in response.text
+    assert response.headers["permissions-policy"] == (
+        "camera=(self), microphone=(), geolocation=()"
+    )
+    assert "frame-ancestors 'none'" in response.headers["content-security-policy"]
 
 
 def test_analyze_returns_camel_case_contract() -> None:
@@ -62,3 +74,45 @@ def test_analyze_rejects_short_transcript() -> None:
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "invalid_request"
 
+
+def test_vision_analysis_requires_explicit_consent() -> None:
+    client = TestClient(create_app(FakeAnalysisService()))
+
+    response = client.post(
+        "/api/vision/analyze",
+        json={
+            "imageDataUrl": (
+                "data:image/png;base64,"
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8"
+                "/x8AAusB9Y9Zl9sAAAAASUVORK5CYII="
+            ),
+            "consentConfirmed": False,
+            "detectedFaceCount": 1,
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_request"
+
+
+def test_vision_analysis_returns_safe_contract() -> None:
+    client = TestClient(create_app(FakeAnalysisService()))
+
+    response = client.post(
+        "/api/vision/analyze",
+        json={
+            "imageDataUrl": (
+                "data:image/png;base64,"
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8"
+                "/x8AAusB9Y9Zl9sAAAAASUVORK5CYII="
+            ),
+            "consentConfirmed": True,
+            "detectedFaceCount": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["result"]["visibleFaces"] == 1
+    assert payload["result"]["framingQuality"] == "clear"
+    assert payload["metadata"]["onDeviceFaceCount"] == 1

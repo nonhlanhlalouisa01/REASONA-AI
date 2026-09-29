@@ -11,6 +11,9 @@ from reasona_app.models import (
     PsychologyContext,
     ReflectionAnalysis,
     ResearchSuggestion,
+    VisionMetadata,
+    VisionObservation,
+    VisionResponse,
 )
 
 
@@ -117,5 +120,34 @@ def reflection_response() -> AnalyzeResponse:
             agent_name="reasona-ai",
             agent_version="2",
             generated_at="2026-09-29T10:00:00+00:00",
+        ),
+    )
+
+
+def vision_response() -> VisionResponse:
+    return VisionResponse(
+        result=VisionObservation(
+            summary=(
+                "One face is visible in a clear head-and-shoulders frame with even lighting."
+            ),
+            visible_faces=1,
+            framing_quality="clear",
+            face_visibility=["One face is fully visible and not cropped."],
+            lighting_observations=["Lighting is even across the visible face."],
+            visible_context=["The background is uncluttered."],
+            practical_suggestions=["Keep the camera near eye level."],
+            conversation_context_note=(
+                "Camera check: one participant is clearly framed against an uncluttered background."
+            ),
+            limitations_note=(
+                "This single still supports framing observations only and does not indicate "
+                "identity, emotion, attention, or engagement."
+            ),
+        ),
+        metadata=VisionMetadata(
+            agent_name="reasona-ai",
+            agent_version="2",
+            generated_at="2026-09-29T10:00:00+00:00",
+            on_device_face_count=1,
         ),
     )

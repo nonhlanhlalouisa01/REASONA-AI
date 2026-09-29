@@ -1,6 +1,68 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      (() => {
+        const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+        const theme =
+          param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --cp-bg: #f7f4ef;
+        --cp-bg-elevated: #fcfbf8;
+        --cp-surface: #ffffff;
+        --cp-surface-soft: #f5f5f5;
+        --cp-border: #dedede;
+        --cp-border-strong: #919191;
+        --cp-text: #242424;
+        --cp-text-muted: #5c5c5c;
+        --cp-text-soft: #6f6f6f;
+        --cp-accent: #b11f4b;
+        --cp-accent-hover: #9a1a41;
+        --cp-accent-soft: rgba(177, 31, 75, 0.08);
+        --cp-accent-fg: #ffffff;
+        --cp-success: #16a34a;
+        --cp-danger: #dc2626;
+        --cp-warning: #f59e0b;
+        --cp-link: #0078d4;
+        --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+        --cp-overlay: rgba(255, 255, 255, 0.8);
+        --cp-panel: rgba(255, 255, 255, 0.86);
+        --cp-panel-strong: rgba(255, 255, 255, 0.96);
+        --cp-sheen: rgba(255, 255, 255, 0.55);
+        --cp-highlight: rgba(177, 31, 75, 0.12);
+      }
+      html[data-theme="dark"] {
+        color-scheme: dark;
+        --cp-bg: #3d3b3a;
+        --cp-bg-elevated: #343231;
+        --cp-surface: #292929;
+        --cp-surface-soft: #2e2e2e;
+        --cp-border: #474747;
+        --cp-border-strong: #5f5f5f;
+        --cp-text: #dedede;
+        --cp-text-muted: #919191;
+        --cp-text-soft: #b0b0b0;
+        --cp-accent: #fd8ea1;
+        --cp-accent-hover: #fb7b91;
+        --cp-accent-soft: rgba(253, 142, 161, 0.14);
+        --cp-accent-fg: #1a1a1a;
+        --cp-success: #4ade80;
+        --cp-danger: #f87171;
+        --cp-warning: #fbbf24;
+        --cp-link: #4da6ff;
+        --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+        --cp-overlay: rgba(41, 41, 41, 0.88);
+        --cp-panel: rgba(41, 41, 41, 0.72);
+        --cp-panel-strong: rgba(41, 41, 41, 0.96);
+        --cp-sheen: rgba(255, 255, 255, 0.04);
+        --cp-highlight: rgba(253, 142, 161, 0.12);
+      }
+    </style>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
@@ -72,10 +134,19 @@
             <p class="topbar__context">Customer engagement workspace</p>
             <h1 id="page-title">Meeting mirror</h1>
           </div>
-          <div class="agent-status" title="Microsoft Foundry agent">
-            <span class="agent-status__dot" aria-hidden="true"></span>
-            <span>{{ agent_name }}</span>
-            <span class="agent-status__version">v{{ agent_version }}</span>
+          <div class="topbar__actions">
+            <button class="camera-launch" id="open-camera" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 8h3l1.5-2h7L17 8h3v11H4z"></path>
+                <circle cx="12" cy="13" r="3.5"></circle>
+              </svg>
+              <span>Camera vision</span>
+            </button>
+            <div class="agent-status" title="Microsoft Foundry agent">
+              <span class="agent-status__dot" aria-hidden="true"></span>
+              <span>{{ agent_name }}</span>
+              <span class="agent-status__version">v{{ agent_version }}</span>
+            </div>
           </div>
         </header>
 
@@ -285,6 +356,181 @@
         </footer>
       </main>
     </div>
+
+    <dialog class="vision-dialog" id="vision-dialog" aria-labelledby="vision-title">
+      <div class="vision-dialog__shell">
+        <header class="vision-dialog__header">
+          <div>
+            <p class="vision-dialog__eyebrow">Privacy-safe visual context</p>
+            <h2 id="vision-title">Camera vision</h2>
+          </div>
+          <button class="dialog-close" id="close-camera" type="button" aria-label="Close camera vision">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18"></path>
+            </svg>
+          </button>
+        </header>
+
+        <div class="vision-dialog__intro">
+          <p>
+            Check who is in frame without identifying anyone. Live face boxes and counts run in
+            your browser. With explicit consent, live analysis sends one current frame to
+            Microsoft Foundry every five seconds until you stop it. You can also analyze a single
+            captured still.
+          </p>
+          <div class="vision-safety-tags" aria-label="Camera privacy boundaries">
+            <span>No recognition</span>
+            <span>No emotion inference</span>
+            <span>No biometric storage</span>
+          </div>
+        </div>
+
+        <div class="vision-workspace">
+          <section class="camera-panel" aria-labelledby="camera-preview-title">
+            <div class="camera-panel__heading">
+              <div>
+                <p>Live camera</p>
+                <h3 id="camera-preview-title">Face presence &amp; framing</h3>
+              </div>
+              <span class="face-status" id="face-status">Camera off</span>
+            </div>
+
+            <div class="camera-stage" id="camera-stage">
+              <video id="camera-video" autoplay muted playsinline hidden></video>
+              <canvas id="face-overlay" hidden></canvas>
+              <img id="captured-image" alt="Approved camera still ready for visual analysis" hidden>
+              <div class="camera-placeholder" id="camera-placeholder">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 8h3l1.5-2h7L17 8h3v11H4z"></path>
+                  <circle cx="12" cy="13" r="3.5"></circle>
+                </svg>
+                <h4>Camera is off</h4>
+                <p>Start the camera when you are ready. Permission is requested only then.</p>
+              </div>
+            </div>
+
+            <p class="camera-message" id="camera-message" role="status" aria-live="polite">
+              Live frames remain in this browser and are not sent to the server.
+            </p>
+
+            <div class="live-analysis-control">
+              <div class="live-analysis-control__heading">
+                <span class="live-analysis-indicator" id="live-analysis-indicator" aria-hidden="true"></span>
+                <div>
+                  <strong>Live Foundry observations</strong>
+                  <small>One current frame every five seconds while enabled</small>
+                </div>
+              </div>
+              <label>
+                <input id="live-analysis-consent" type="checkbox">
+                <span>
+                  I confirm that everyone visible has agreed to periodic frames being analyzed for
+                  non-biometric visual context.
+                </span>
+              </label>
+              <div class="live-analysis-control__actions">
+                <button class="vision-primary" id="toggle-live-analysis" type="button" disabled>
+                  Start live analysis
+                </button>
+                <span id="live-analysis-status" role="status" aria-live="polite">
+                  Off · no frames are being sent
+                </span>
+              </div>
+            </div>
+
+            <div class="camera-controls">
+              <button class="vision-primary" id="start-camera" type="button">Start camera</button>
+              <button class="vision-primary" id="capture-frame" type="button" hidden>
+                Capture still
+              </button>
+              <button class="vision-secondary" id="retake-frame" type="button" hidden>
+                Retake
+              </button>
+              <button class="vision-secondary" id="stop-camera" type="button" hidden>
+                Stop camera
+              </button>
+            </div>
+
+            <div class="capture-consent" id="capture-consent" hidden>
+              <label>
+                <input id="vision-consent" type="checkbox">
+                <span>
+                  I confirm that the people visible have agreed to this still being analyzed for
+                  non-biometric framing and visual context.
+                </span>
+              </label>
+              <button class="vision-primary" id="analyze-still" type="button" disabled>
+                Analyze approved still
+              </button>
+              <p>
+                The approved still is processed by Microsoft Foundry for this request and is not
+                saved by Reasona.
+              </p>
+            </div>
+          </section>
+
+          <aside class="vision-result-panel" aria-labelledby="vision-result-title">
+            <div class="vision-result-empty" id="vision-result-empty">
+              <span class="vision-result-empty__mark" aria-hidden="true">
+                <i></i><i></i><i></i>
+              </span>
+              <p>Visual observation</p>
+              <h3 id="vision-result-title">Your camera check will appear here</h3>
+              <span>
+                Reasona can comment on face count, framing, lighting, occlusion, and visible
+                meeting context. It will not identify people or infer how they feel.
+              </span>
+            </div>
+
+            <div class="vision-result-loading" id="vision-result-loading" hidden aria-live="polite">
+              <span class="vision-loader" aria-hidden="true"></span>
+              <p>Reviewing approved still</p>
+              <h3>Separating visible detail from sensitive inference...</h3>
+            </div>
+
+            <div class="vision-result-error" id="vision-result-error" hidden role="alert">
+              <span aria-hidden="true">!</span>
+              <p>Visual analysis not completed</p>
+              <h3 id="vision-error-message">Reasona could not analyze this still.</h3>
+              <small id="vision-error-hint"></small>
+            </div>
+
+            <article class="vision-result" id="vision-result" hidden tabindex="-1">
+              <div class="vision-result__topline">
+                <p>Observable visual context</p>
+                <span id="vision-framing-badge">Clear framing</span>
+              </div>
+              <h3 id="vision-summary"></h3>
+              <div class="vision-face-count">
+                <strong id="vision-face-count">0</strong>
+                <span>visible faces<br>in this still</span>
+              </div>
+              <div class="vision-observation-grid">
+                <section>
+                  <p>Face visibility</p>
+                  <ul id="vision-face-visibility"></ul>
+                </section>
+                <section>
+                  <p>Lighting</p>
+                  <ul id="vision-lighting"></ul>
+                </section>
+                <section>
+                  <p>Visible context</p>
+                  <ul id="vision-context"></ul>
+                </section>
+                <section>
+                  <p>Practical suggestions</p>
+                  <ul id="vision-suggestions"></ul>
+                </section>
+              </div>
+              <p class="vision-limitations" id="vision-limitations"></p>
+              <button class="vision-secondary vision-use-context" id="use-vision-context" type="button">
+                Add safe note to customer context
+              </button>
+            </article>
+          </aside>
+        </div>
+      </div>
+    </dialog>
   </body>
 </html>
-

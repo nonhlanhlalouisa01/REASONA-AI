@@ -1,5 +1,5 @@
-from reasona_app.models import AnalysisMode, PrepareRequest, ReflectRequest
-from reasona_app.prompts import build_analysis_prompt
+from reasona_app.models import AnalysisMode, PrepareRequest, ReflectRequest, VisionRequest
+from reasona_app.prompts import build_analysis_prompt, build_vision_prompt
 
 
 def test_reflection_prompt_marks_transcript_as_untrusted_evidence() -> None:
@@ -39,3 +39,23 @@ def test_preparation_prompt_prohibits_claiming_research_is_complete() -> None:
     assert "research is already complete" in prompt.lower()
     assert '"researchToComplete"' in prompt
     assert "manipulate the customer" in prompt
+
+
+def test_vision_prompt_prohibits_biometric_and_emotion_inference() -> None:
+    request = VisionRequest(
+        image_data_url=(
+            "data:image/png;base64,"
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8"
+            "/x8AAusB9Y9Zl9sAAAAASUVORK5CYII="
+        ),
+        consent_confirmed=True,
+        detected_face_count=2,
+    )
+
+    prompt = build_vision_prompt(request)
+
+    assert "reported 2 visible face(s)" in prompt
+    assert "Do not identify or recognize anyone" in prompt
+    assert "Do not infer emotion" in prompt
+    assert "Do not create face embeddings" in prompt
+    assert '"conversationContextNote"' in prompt
