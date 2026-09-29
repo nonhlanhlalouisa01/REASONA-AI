@@ -40,8 +40,9 @@ Open **Camera vision** to:
 - explicitly enable live Foundry observations, sampled at one current frame every five seconds;
 - capture a still only when the user chooses;
 - require confirmation that visible people agreed before either live or still-image analysis;
-- receive non-biometric observations about face count, framing, lighting, occlusion, and visible
-  meeting context; and
+- receive non-biometric observations about face count, framing, lighting, posture and position,
+  head orientation, visible gestures, and meeting context;
+- review an accumulating observable-cues report and download it as JSON; and
 - add only a safe text note to customer context.
 
 The live detector does not identify people and does not upload frames. The browser downloads the
@@ -61,8 +62,8 @@ Reasona supports human judgement; it does not replace it. The application:
 - clears the camera stream and captured still from browser state when the camera workspace closes;
 - treats transcripts and notes as untrusted evidence, not instructions;
 - does not perform face recognition or create biometric templates;
-- does not infer hidden emotions, attention, personality, honesty, intelligence, mental health,
-  demographics, or private intent;
+- does not infer sentiment, hidden emotions, attention, engagement, personality, honesty,
+  intelligence, mental health, demographics, or private intent from visual cues;
 - labels interpretations cautiously and requires observable evidence; and
 - fails explicitly when the Foundry agent is unavailable or returns an invalid structure.
 

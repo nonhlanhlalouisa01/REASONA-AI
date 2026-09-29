@@ -42,6 +42,9 @@
   const visionResultLoading = document.querySelector("#vision-result-loading");
   const visionResultError = document.querySelector("#vision-result-error");
   const visionResult = document.querySelector("#vision-result");
+  const visionTabButtons = [...document.querySelectorAll("[data-vision-tab]")];
+  const visionTabPanels = [...document.querySelectorAll("[data-vision-panel]")];
+  const visionReportReady = document.querySelector("#vision-report-ready");
   const maxTranscriptCharacters = Number(body.dataset.maxTranscriptCharacters || 60000);
 
   const state = {
@@ -58,11 +61,20 @@
       capturedFaceCount: null,
       imageDataUrl: null,
       contextNote: null,
+      latestResult: null,
       liveAnalysisEnabled: false,
       liveAnalysisTimer: null,
       liveAnalysisControllers: new Set(),
       liveAnalysisSequence: 0,
       latestVisionSequence: 0,
+      report: {
+        analyzedFrames: 0,
+        postureAndPosition: [],
+        headOrientation: [],
+        visibleGestures: [],
+        environmentObservations: [],
+        practicalSuggestions: [],
+      },
     },
   };
 
@@ -646,17 +658,44 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     }
   }
 
+  function setVisionTab(tabName, { focus = false } = {}) {
+    visionTabButtons.forEach((button) => {
+      const isActive = button.dataset.visionTab === tabName;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", String(isActive));
+      button.tabIndex = isActive ? 0 : -1;
+      if (isActive && focus) {
+        button.focus();
+      }
+    });
+    visionTabPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.visionPanel !== tabName;
+    });
+  }
+
   function showVisionState(target) {
     [visionResultEmpty, visionResultLoading, visionResultError, visionResult].forEach((node) => {
       node.hidden = node !== target;
     });
+    visionReportReady.hidden = ![visionResult, visionResultError].includes(target);
   }
 
   function clearVisionResult() {
     state.camera.contextNote = null;
+    state.camera.latestResult = null;
+    state.camera.report = {
+      analyzedFrames: 0,
+      postureAndPosition: [],
+      headOrientation: [],
+      visibleGestures: [],
+      environmentObservations: [],
+      practicalSuggestions: [],
+    };
+    document.querySelector("#vision-frame-count").textContent = "0";
     document.querySelector("#use-vision-context").disabled = false;
     document.querySelector("#use-vision-context").textContent =
       "Add safe note to customer context";
+    visionReportReady.hidden = true;
     showVisionState(visionResultEmpty);
   }
 
@@ -1085,20 +1124,61 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     target.replaceChildren(...values.map((item) => element("li", "", item)));
   }
 
-  function renderVisionAnalysis(payload) {
+  function mergeVisionItems(currentItems, ...newItemGroups) {
+    const mergedItems = [...currentItems];
+    newItemGroups.flat().forEach((item) => {
+      const normalizedItem = typeof item === "string" ? item.trim() : "";
+      if (normalizedItem && !mergedItems.includes(normalizedItem)) {
+        mergedItems.push(normalizedItem);
+      }
+    });
+    return mergedItems.slice(-12);
+  }
+
+  function renderVisionAnalysis(payload, { openReport = false } = {}) {
     const result = payload.result;
+    const report = state.camera.report;
+    report.analyzedFrames += 1;
+    report.postureAndPosition = mergeVisionItems(
+      report.postureAndPosition,
+      result.postureAndPosition,
+    );
+    report.headOrientation = mergeVisionItems(
+      report.headOrientation,
+      result.headOrientation,
+    );
+    report.visibleGestures = mergeVisionItems(
+      report.visibleGestures,
+      result.visibleGestures,
+    );
+    report.environmentObservations = mergeVisionItems(
+      report.environmentObservations,
+      result.faceVisibility,
+      result.lightingObservations,
+      result.visibleContext,
+    );
+    report.practicalSuggestions = mergeVisionItems(
+      report.practicalSuggestions,
+      result.practicalSuggestions,
+    );
     state.camera.contextNote = result.conversationContextNote;
+    state.camera.latestResult = result;
     document.querySelector("#vision-summary").textContent = result.summary;
     document.querySelector("#vision-face-count").textContent = result.visibleFaces;
+    document.querySelector("#vision-frame-count").textContent = report.analyzedFrames;
     document.querySelector("#vision-framing-badge").textContent =
       `${result.framingQuality} framing`;
     document.querySelector("#vision-limitations").textContent = result.limitationsNote;
-    fillVisionList("#vision-face-visibility", result.faceVisibility);
-    fillVisionList("#vision-lighting", result.lightingObservations);
-    fillVisionList("#vision-context", result.visibleContext);
-    fillVisionList("#vision-suggestions", result.practicalSuggestions);
+    fillVisionList("#vision-posture", report.postureAndPosition);
+    fillVisionList("#vision-head-orientation", report.headOrientation);
+    fillVisionList("#vision-gestures", report.visibleGestures);
+    fillVisionList("#vision-environment", report.environmentObservations);
+    fillVisionList("#vision-suggestions", report.practicalSuggestions);
     showVisionState(visionResult);
-    visionResult.focus({ preventScroll: true });
+    if (openReport) {
+      setVisionTab("report");
+      visionResult.focus({ preventScroll: true });
+    }
   }
 
   async function requestVisionAnalysis(imageDataUrl, detectedFaceCount, signal) {
@@ -1129,13 +1209,14 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     if (!state.camera.imageDataUrl || !visionConsent.checked) return;
 
     analyzeStillButton.disabled = true;
+    setVisionTab("report");
     showVisionState(visionResultLoading);
     try {
       const payload = await requestVisionAnalysis(
         state.camera.imageDataUrl,
         state.camera.capturedFaceCount,
       );
-      renderVisionAnalysis(payload);
+      renderVisionAnalysis(payload, { openReport: true });
     } catch (error) {
       document.querySelector("#vision-error-message").textContent =
         typeof error?.message === "string"
@@ -1170,15 +1251,50 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
       "A non-sensitive visual note was added. The captured image itself was not added.";
   }
 
-  function openCameraDialog() {
+  function downloadVisionReport() {
+    if (!state.camera.latestResult || !state.camera.report.analyzedFrames) return;
+    const latestResult = state.camera.latestResult;
+    const report = {
+      generatedAt: new Date().toISOString(),
+      reportType: "observable-camera-cues",
+      framesAnalyzed: state.camera.report.analyzedFrames,
+      summary: latestResult.summary,
+      latestFrame: {
+        visibleFaces: latestResult.visibleFaces,
+        framingQuality: latestResult.framingQuality,
+      },
+      observableCues: {
+        postureAndPosition: state.camera.report.postureAndPosition,
+        headOrientation: state.camera.report.headOrientation,
+        visibleGestures: state.camera.report.visibleGestures,
+        environmentAndFraming: state.camera.report.environmentObservations,
+      },
+      practicalSuggestions: state.camera.report.practicalSuggestions,
+      limitations: latestResult.limitationsNote,
+      safetyNote:
+        "This report contains observable visual cues only. It does not infer sentiment, emotion, intent, attention, engagement, personality, or identity.",
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
+      type: "application/json",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `reasona-camera-report-${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }
+
+  async function openCameraDialog() {
     if (!visionDialog.open) {
       visionDialog.showModal();
-      startCameraButton.focus();
+      setVisionTab("camera");
+      await startCamera();
     }
   }
 
   function closeCameraDialog() {
     resetCameraWorkspace();
+    setVisionTab("camera");
     visionDialog.close();
   }
 
@@ -1221,6 +1337,17 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
   document.querySelector("#print-result").addEventListener("click", () => window.print());
   document.querySelector("#open-camera").addEventListener("click", openCameraDialog);
   document.querySelector("#close-camera").addEventListener("click", closeCameraDialog);
+  visionTabButtons.forEach((button, index) => {
+    button.addEventListener("click", () => setVisionTab(button.dataset.visionTab));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const nextIndex =
+        (index + direction + visionTabButtons.length) % visionTabButtons.length;
+      setVisionTab(visionTabButtons[nextIndex].dataset.visionTab, { focus: true });
+    });
+  });
   startCameraButton.addEventListener("click", startCamera);
   captureFrameButton.addEventListener("click", captureStill);
   retakeFrameButton.addEventListener("click", retakeStill);
@@ -1240,6 +1367,9 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     toggleLiveAnalysisButton.disabled = !state.camera.stream;
   });
   analyzeStillButton.addEventListener("click", analyzeCapturedStill);
+  document
+    .querySelector("#download-vision-report")
+    .addEventListener("click", downloadVisionReport);
   document.querySelector("#use-vision-context").addEventListener("click", addVisionContext);
   visionConsent.addEventListener("change", () => {
     analyzeStillButton.disabled = !visionConsent.checked || !state.camera.imageDataUrl;

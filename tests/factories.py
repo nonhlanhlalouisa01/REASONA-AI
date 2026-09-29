@@ -133,6 +133,11 @@ def vision_response() -> VisionResponse:
             visible_faces=1,
             framing_quality="clear",
             face_visibility=["One face is fully visible and not cropped."],
+            posture_and_position=[
+                "One participant is seated centrally with their shoulders visible."
+            ],
+            head_orientation=["The participant's head is oriented toward the camera."],
+            visible_gestures=["No hand gestures are visible in this still."],
             lighting_observations=["Lighting is even across the visible face."],
             visible_context=["The background is uncluttered."],
             practical_suggestions=["Keep the camera near eye level."],

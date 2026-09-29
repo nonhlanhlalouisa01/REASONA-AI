@@ -26,6 +26,9 @@ def test_index_renders_workspace() -> None:
     assert response.status_code == 200
     assert "Meeting mirror" in response.text
     assert "reasona-ai" in response.text
+    assert 'id="vision-tab-camera"' in response.text
+    assert 'id="vision-tab-report"' in response.text
+    assert "Analysis report" in response.text
     assert response.headers["permissions-policy"] == (
         "camera=(self), microphone=(), geolocation=()"
     )
@@ -115,4 +118,13 @@ def test_vision_analysis_returns_safe_contract() -> None:
     payload = response.json()
     assert payload["result"]["visibleFaces"] == 1
     assert payload["result"]["framingQuality"] == "clear"
+    assert payload["result"]["postureAndPosition"] == [
+        "One participant is seated centrally with their shoulders visible."
+    ]
+    assert payload["result"]["headOrientation"] == [
+        "The participant's head is oriented toward the camera."
+    ]
+    assert payload["result"]["visibleGestures"] == [
+        "No hand gestures are visible in this still."
+    ]
     assert payload["metadata"]["onDeviceFaceCount"] == 1

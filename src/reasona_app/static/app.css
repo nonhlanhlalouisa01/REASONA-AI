@@ -1450,9 +1450,8 @@ dialog:focus-visible,
   display: flex;
   justify-content: space-between;
   gap: 20px;
-  align-items: flex-start;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--cp-border);
+  align-items: center;
+  padding-bottom: 14px;
 }
 
 .vision-dialog__eyebrow {
@@ -1468,6 +1467,12 @@ dialog:focus-visible,
   margin: 0;
   font-size: 28px;
   letter-spacing: -0.03em;
+}
+
+.vision-dialog__subtitle {
+  margin: 4px 0 0;
+  color: var(--cp-text-muted);
+  font-size: 11px;
 }
 
 .dialog-close {
@@ -1488,18 +1493,9 @@ dialog:focus-visible,
 
 .vision-dialog__intro {
   display: flex;
-  justify-content: space-between;
-  gap: 28px;
+  justify-content: flex-end;
   align-items: center;
-  padding: 20px 0;
-}
-
-.vision-dialog__intro > p {
-  max-width: 680px;
-  margin: 0;
-  color: var(--cp-text-muted);
-  font-size: 12px;
-  line-height: 1.65;
+  padding: 0 0 12px;
 }
 
 .vision-safety-tags {
@@ -1510,7 +1506,7 @@ dialog:focus-visible,
 }
 
 .vision-safety-tags span {
-  padding: 6px 9px;
+  padding: 5px 8px;
   border: 1px solid var(--cp-border);
   border-radius: 999px;
   color: var(--cp-text-muted);
@@ -1519,15 +1515,60 @@ dialog:focus-visible,
   font-weight: 650;
 }
 
-.vision-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 20px;
+.vision-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border: 1px solid var(--cp-border);
+  border-radius: var(--radius-control);
+  background: var(--cp-surface-soft);
+}
+
+.vision-tab {
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 18px;
+  cursor: pointer;
+  border: 0;
+  border-radius: calc(var(--radius-control) - 3px);
+  color: var(--cp-text-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.vision-tab:hover {
+  color: var(--cp-text);
+}
+
+.vision-tab.is-active {
+  color: var(--cp-text);
+  background: var(--cp-surface);
+  box-shadow: 0 1px 5px rgb(19 49 45 / 8%);
+}
+
+.vision-tab__ready {
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: var(--cp-success);
+  background: color-mix(in srgb, var(--cp-success) 12%, transparent);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vision-tab-panel {
+  min-width: 0;
 }
 
 .camera-panel,
 .vision-result-panel {
-  padding: 20px;
+  padding: 16px;
   border: 1px solid var(--cp-border);
   border-radius: var(--radius-card);
   background: var(--cp-surface);
@@ -1584,7 +1625,9 @@ dialog:focus-visible,
   display: grid;
   place-items: center;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 8.5;
+  min-height: 320px;
+  max-height: 46vh;
   overflow: hidden;
   border: 1px solid var(--cp-border);
   border-radius: var(--radius-control);
@@ -1645,14 +1688,16 @@ dialog:focus-visible,
 
 .camera-message {
   min-height: 16px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .live-analysis-control {
   display: grid;
-  gap: 12px;
-  margin-top: 14px;
-  padding: 14px;
+  grid-template-columns: auto minmax(220px, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px;
   border: 1px solid var(--cp-border);
   border-radius: var(--radius-control);
   background: var(--cp-bg-elevated);
@@ -1706,7 +1751,7 @@ dialog:focus-visible,
   align-items: start;
   cursor: pointer;
   color: var(--cp-text-muted);
-  font-size: 10px;
+  font-size: 9px;
   line-height: 1.5;
 }
 
@@ -1718,10 +1763,9 @@ dialog:focus-visible,
 }
 
 .live-analysis-control__actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 10px;
-  align-items: center;
+  justify-items: end;
 }
 
 .live-analysis-control__actions > span {
@@ -1738,14 +1782,15 @@ dialog:focus-visible,
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .capture-consent {
-  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
   gap: 12px;
-  margin-top: 16px;
-  padding: 14px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px;
   border: 1px solid var(--cp-border);
   border-radius: var(--radius-control);
   background: var(--cp-surface-soft);
@@ -1769,11 +1814,11 @@ dialog:focus-visible,
 }
 
 .capture-consent .vision-primary {
-  justify-self: start;
+  justify-self: end;
 }
 
 .vision-result-panel {
-  min-height: 520px;
+  min-height: 560px;
 }
 
 .vision-result-empty,
@@ -1783,7 +1828,7 @@ dialog:focus-visible,
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 475px;
+  min-height: 520px;
   padding: 28px;
   text-align: center;
 }
@@ -1860,24 +1905,45 @@ dialog:focus-visible,
   margin-bottom: 12px;
 }
 
-.vision-face-count {
+.vision-result__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vision-result__actions .vision-secondary {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 9px;
+}
+
+.vision-report-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.vision-face-count,
+.vision-frame-count {
   display: flex;
   gap: 10px;
   align-items: center;
-  margin: 18px 0;
   padding: 14px;
   border: 1px solid var(--cp-border);
   border-radius: var(--radius-control);
   background: var(--cp-accent-soft);
 }
 
-.vision-face-count strong {
+.vision-face-count strong,
+.vision-frame-count strong {
   color: var(--cp-accent);
   font-size: 32px;
   line-height: 1;
 }
 
-.vision-face-count span {
+.vision-face-count span,
+.vision-frame-count span {
   color: var(--cp-text-muted);
   font-size: 9px;
   line-height: 1.35;
@@ -1895,6 +1961,10 @@ dialog:focus-visible,
   border: 1px solid var(--cp-border);
   border-radius: var(--radius-control);
   background: var(--cp-bg-elevated);
+}
+
+.vision-observation-grid__wide {
+  grid-column: 1 / -1;
 }
 
 .vision-observation-grid section > p {
@@ -2078,6 +2148,11 @@ dialog:focus-visible,
     padding: 18px;
   }
 
+  .vision-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
   .vision-safety-tags {
     justify-content: flex-start;
   }
@@ -2085,6 +2160,34 @@ dialog:focus-visible,
   .camera-panel,
   .vision-result-panel {
     padding: 14px;
+  }
+
+  .camera-stage {
+    min-height: 260px;
+    aspect-ratio: 4 / 3;
+  }
+
+  .live-analysis-control,
+  .capture-consent {
+    grid-template-columns: 1fr;
+  }
+
+  .vision-report-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .vision-result__topline,
+  .vision-result__actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .live-analysis-control__actions {
+    justify-items: start;
+  }
+
+  .capture-consent .vision-primary {
+    justify-self: start;
   }
 }
 

@@ -361,8 +361,9 @@
       <div class="vision-dialog__shell">
         <header class="vision-dialog__header">
           <div>
-            <p class="vision-dialog__eyebrow">Privacy-safe visual context</p>
+            <p class="vision-dialog__eyebrow">Live visual analysis</p>
             <h2 id="vision-title">Camera vision</h2>
+            <p class="vision-dialog__subtitle">See the camera. Run analysis. Review the report.</p>
           </div>
           <button class="dialog-close" id="close-camera" type="button" aria-label="Close camera vision">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -372,25 +373,51 @@
         </header>
 
         <div class="vision-dialog__intro">
-          <p>
-            Check who is in frame without identifying anyone. Live face boxes and counts run in
-            your browser. With explicit consent, live analysis sends one current frame to
-            Microsoft Foundry every five seconds until you stop it. You can also analyze a single
-            captured still.
-          </p>
           <div class="vision-safety-tags" aria-label="Camera privacy boundaries">
             <span>No recognition</span>
-            <span>No emotion inference</span>
-            <span>No biometric storage</span>
+            <span>Observable cues only</span>
+            <span>Consent required</span>
           </div>
         </div>
 
-        <div class="vision-workspace">
+        <div class="vision-tabs" role="tablist" aria-label="Camera vision views">
+          <button
+            class="vision-tab is-active"
+            id="vision-tab-camera"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="vision-panel-camera"
+            data-vision-tab="camera"
+          >
+            Camera
+          </button>
+          <button
+            class="vision-tab"
+            id="vision-tab-report"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="vision-panel-report"
+            data-vision-tab="report"
+          >
+            Analysis report
+            <span class="vision-tab__ready" id="vision-report-ready" hidden>Ready</span>
+          </button>
+        </div>
+
+        <div
+          class="vision-tab-panel"
+          id="vision-panel-camera"
+          role="tabpanel"
+          aria-labelledby="vision-tab-camera"
+          data-vision-panel="camera"
+        >
           <section class="camera-panel" aria-labelledby="camera-preview-title">
             <div class="camera-panel__heading">
               <div>
-                <p>Live camera</p>
-                <h3 id="camera-preview-title">Face presence &amp; framing</h3>
+                <p>Camera</p>
+                <h3 id="camera-preview-title">Live preview</h3>
               </div>
               <span class="face-status" id="face-status">Camera off</span>
             </div>
@@ -405,38 +432,13 @@
                   <circle cx="12" cy="13" r="3.5"></circle>
                 </svg>
                 <h4>Camera is off</h4>
-                <p>Start the camera when you are ready. Permission is requested only then.</p>
+                <p>Allow camera access to begin.</p>
               </div>
             </div>
 
             <p class="camera-message" id="camera-message" role="status" aria-live="polite">
-              Live frames remain in this browser and are not sent to the server.
+              Camera frames stay private until analysis is enabled.
             </p>
-
-            <div class="live-analysis-control">
-              <div class="live-analysis-control__heading">
-                <span class="live-analysis-indicator" id="live-analysis-indicator" aria-hidden="true"></span>
-                <div>
-                  <strong>Live Foundry observations</strong>
-                  <small>One current frame every five seconds while enabled</small>
-                </div>
-              </div>
-              <label>
-                <input id="live-analysis-consent" type="checkbox">
-                <span>
-                  I confirm that everyone visible has agreed to periodic frames being analyzed for
-                  non-biometric visual context.
-                </span>
-              </label>
-              <div class="live-analysis-control__actions">
-                <button class="vision-primary" id="toggle-live-analysis" type="button" disabled>
-                  Start live analysis
-                </button>
-                <span id="live-analysis-status" role="status" aria-live="polite">
-                  Off · no frames are being sent
-                </span>
-              </div>
-            </div>
 
             <div class="camera-controls">
               <button class="vision-primary" id="start-camera" type="button">Start camera</button>
@@ -451,41 +453,62 @@
               </button>
             </div>
 
+            <div class="live-analysis-control">
+              <div class="live-analysis-control__heading">
+                <span class="live-analysis-indicator" id="live-analysis-indicator" aria-hidden="true"></span>
+                <div>
+                  <strong>Live analysis</strong>
+                  <small>Updates every five seconds</small>
+                </div>
+              </div>
+              <label>
+                <input id="live-analysis-consent" type="checkbox">
+                <span>I have consent to analyze periodic frames.</span>
+              </label>
+              <div class="live-analysis-control__actions">
+                <button class="vision-primary" id="toggle-live-analysis" type="button" disabled>
+                  Start live analysis
+                </button>
+                <span id="live-analysis-status" role="status" aria-live="polite">
+                  Analysis off
+                </span>
+              </div>
+            </div>
+
             <div class="capture-consent" id="capture-consent" hidden>
               <label>
                 <input id="vision-consent" type="checkbox">
-                <span>
-                  I confirm that the people visible have agreed to this still being analyzed for
-                  non-biometric framing and visual context.
-                </span>
+                <span>I have consent to analyze this still.</span>
               </label>
               <button class="vision-primary" id="analyze-still" type="button" disabled>
-                Analyze approved still
+                Analyze still
               </button>
-              <p>
-                The approved still is processed by Microsoft Foundry for this request and is not
-                saved by Reasona.
-              </p>
             </div>
           </section>
+        </div>
 
+        <div
+          class="vision-tab-panel"
+          id="vision-panel-report"
+          role="tabpanel"
+          aria-labelledby="vision-tab-report"
+          data-vision-panel="report"
+          hidden
+        >
           <aside class="vision-result-panel" aria-labelledby="vision-result-title">
             <div class="vision-result-empty" id="vision-result-empty">
               <span class="vision-result-empty__mark" aria-hidden="true">
                 <i></i><i></i><i></i>
               </span>
-              <p>Visual observation</p>
-              <h3 id="vision-result-title">Your camera check will appear here</h3>
-              <span>
-                Reasona can comment on face count, framing, lighting, occlusion, and visible
-                meeting context. It will not identify people or infer how they feel.
-              </span>
+              <p>Analysis report</p>
+              <h3 id="vision-result-title">No analysis yet</h3>
+              <span>Start live analysis or analyze a captured still.</span>
             </div>
 
             <div class="vision-result-loading" id="vision-result-loading" hidden aria-live="polite">
               <span class="vision-loader" aria-hidden="true"></span>
-              <p>Reviewing approved still</p>
-              <h3>Separating visible detail from sensitive inference...</h3>
+              <p>Analyzing camera</p>
+              <h3>Preparing your report...</h3>
             </div>
 
             <div class="vision-result-error" id="vision-result-error" hidden role="alert">
@@ -498,27 +521,42 @@
             <article class="vision-result" id="vision-result" hidden tabindex="-1">
               <div class="vision-result__topline">
                 <p>Observable visual context</p>
-                <span id="vision-framing-badge">Clear framing</span>
+                <div class="vision-result__actions">
+                  <span id="vision-framing-badge">Clear framing</span>
+                  <button class="vision-secondary" id="download-vision-report" type="button">
+                    Download report
+                  </button>
+                </div>
               </div>
               <h3 id="vision-summary"></h3>
-              <div class="vision-face-count">
-                <strong id="vision-face-count">0</strong>
-                <span>visible faces<br>in this still</span>
+              <div class="vision-report-metrics">
+                <div class="vision-face-count">
+                  <strong id="vision-face-count">0</strong>
+                  <span>visible faces<br>in latest frame</span>
+                </div>
+                <div class="vision-frame-count">
+                  <strong id="vision-frame-count">0</strong>
+                  <span>frames<br>analyzed</span>
+                </div>
               </div>
               <div class="vision-observation-grid">
                 <section>
-                  <p>Face visibility</p>
-                  <ul id="vision-face-visibility"></ul>
+                  <p>Posture &amp; position</p>
+                  <ul id="vision-posture"></ul>
                 </section>
                 <section>
-                  <p>Lighting</p>
-                  <ul id="vision-lighting"></ul>
+                  <p>Head orientation</p>
+                  <ul id="vision-head-orientation"></ul>
                 </section>
                 <section>
-                  <p>Visible context</p>
-                  <ul id="vision-context"></ul>
+                  <p>Visible gestures</p>
+                  <ul id="vision-gestures"></ul>
                 </section>
                 <section>
+                  <p>Environment &amp; framing</p>
+                  <ul id="vision-environment"></ul>
+                </section>
+                <section class="vision-observation-grid__wide">
                   <p>Practical suggestions</p>
                   <ul id="vision-suggestions"></ul>
                 </section>

@@ -58,4 +58,8 @@ def test_vision_prompt_prohibits_biometric_and_emotion_inference() -> None:
     assert "Do not identify or recognize anyone" in prompt
     assert "Do not infer emotion" in prompt
     assert "Do not create face embeddings" in prompt
+    assert "Never map posture, orientation, facial expression, or gestures to sentiment" in prompt
+    assert '"postureAndPosition"' in prompt
+    assert '"headOrientation"' in prompt
+    assert '"visibleGestures"' in prompt
     assert '"conversationContextNote"' in prompt

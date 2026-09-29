@@ -144,6 +144,9 @@ class VisionObservation(ApiModel):
     visible_faces: int = Field(ge=0, le=20)
     framing_quality: FramingQuality
     face_visibility: list[str] = Field(default_factory=list, max_length=8)
+    posture_and_position: list[str] = Field(max_length=8)
+    head_orientation: list[str] = Field(max_length=8)
+    visible_gestures: list[str] = Field(max_length=8)
     lighting_observations: list[str] = Field(default_factory=list, max_length=8)
     visible_context: list[str] = Field(default_factory=list, max_length=8)
     practical_suggestions: list[str] = Field(default_factory=list, max_length=8)
