@@ -14,7 +14,7 @@ def validate_image_data_url(image_data_url: str, *, max_bytes: int) -> None:
     if match is None:
         raise ReasonaError(
             code="invalid_image",
-            message="The captured image must be a JPEG, PNG, or WebP data URL.",
+            message="The live video frame must be a JPEG, PNG, or WebP data URL.",
             status_code=422,
             hint="Retake the image with the Reasona camera and try again.",
         )
@@ -24,7 +24,7 @@ def validate_image_data_url(image_data_url: str, *, max_bytes: int) -> None:
     except (binascii.Error, ValueError) as exc:
         raise ReasonaError(
             code="invalid_image",
-            message="The captured image data is not valid base64.",
+            message="The live video frame data is not valid base64.",
             status_code=422,
             hint="Retake the image with the Reasona camera and try again.",
         ) from exc
@@ -32,14 +32,14 @@ def validate_image_data_url(image_data_url: str, *, max_bytes: int) -> None:
     if not image_bytes:
         raise ReasonaError(
             code="invalid_image",
-            message="The captured image is empty.",
+            message="The live video frame is empty.",
             status_code=422,
             hint="Retake the image after the camera preview is visible.",
         )
     if len(image_bytes) > max_bytes:
         raise ReasonaError(
             code="image_too_large",
-            message=f"The captured image exceeds the {max_bytes:,}-byte limit.",
+            message=f"The live video frame exceeds the {max_bytes:,}-byte limit.",
             status_code=413,
             hint="Retake the image at a lower camera resolution.",
         )
@@ -48,7 +48,7 @@ def validate_image_data_url(image_data_url: str, *, max_bytes: int) -> None:
     if not _matches_signature(image_bytes, mime_type):
         raise ReasonaError(
             code="invalid_image",
-            message="The captured image content does not match its declared format.",
+            message="The live video frame content does not match its declared format.",
             status_code=422,
             hint="Retake the image with the Reasona camera and try again.",
         )

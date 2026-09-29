@@ -35,14 +35,13 @@ Add the next meeting goal, known context, previous notes, and explicit concerns.
 - research to complete and communication watchouts; and
 - clear success outcomes for the meeting.
 
-### Camera Vision
+### Live Video Analysis
 
-Open **Camera vision** to:
+Open **Live video** to:
 
 - see a live face count and framing boxes that run in the browser;
-- explicitly enable live Foundry observations, sampled at one current frame every five seconds;
-- capture a still only when the user chooses;
-- require confirmation that visible people agreed before either live or still-image analysis;
+- explicitly enable live Foundry observations, sampled at one current frame every second;
+- require confirmation that visible people agreed before live-video analysis;
 - receive non-biometric observations about face count, framing, lighting, posture and position,
   head orientation, visible gestures, and meeting context;
 - review an accumulating observable-cues report and download it as JSON; and
@@ -51,10 +50,8 @@ Open **Camera vision** to:
 The live detector does not identify people and does not upload frames. The browser downloads the
 pinned MediaPipe Tasks Vision library from jsDelivr and Google's face-detection model when the
 camera starts; detection then runs locally. If the user separately enables **Start live analysis**,
-the browser sends one current frame to Microsoft Foundry every five seconds until stopped. Live
-analysis stops when consent is withdrawn, the camera workspace closes, or the tab is hidden. A
-captured still is sent only after the user confirms consent and selects
-**Analyze approved still**.
+the browser sends one current video frame to Microsoft Foundry every second until stopped. Live
+analysis stops when consent is withdrawn, the video workspace closes, or the tab is hidden.
 
 ## Responsible by design
 
@@ -62,7 +59,7 @@ Reasona supports human judgement; it does not replace it. The application:
 
 - uses authorised content supplied by the user;
 - does not persist meeting content or analysis;
-- clears the camera stream and captured still from browser state when the camera workspace closes;
+- clears the live video stream from browser state when the video workspace closes;
 - treats transcripts and notes as untrusted evidence, not instructions;
 - does not perform face recognition or create biometric templates;
 - does not infer sentiment, hidden emotions, attention, engagement, personality, honesty,
@@ -80,7 +77,7 @@ Browser
   │
   ├─ on-device MediaPipe face detection (live frames remain local)
   │
-  │  JSON over HTTPS (text or one explicitly approved still)
+  │  JSON over HTTPS (text or explicitly approved live-video frames)
   ▼
 FastAPI application
   ├─ Pydantic request and response contracts
@@ -150,7 +147,7 @@ mypy
 | `FOUNDRY_AGENT_VERSION` | Expected active version shown in output metadata | `2` |
 | `FOUNDRY_TIMEOUT_SECONDS` | Per-analysis SDK timeout | `120` |
 | `MAX_TRANSCRIPT_CHARACTERS` | UI transcript limit | `60000` |
-| `MAX_IMAGE_BYTES` | Decoded still-image limit | `4000000` |
+| `MAX_IMAGE_BYTES` | Decoded live-video frame limit | `4000000` |
 
 The Foundry agent endpoint routes requests by agent name. `FOUNDRY_AGENT_VERSION` documents the
 expected active version and makes drift visible in every downloaded result.
@@ -177,8 +174,7 @@ instead of guessing missing evidence.
 
 Use `http://127.0.0.1:8000` or HTTPS, grant camera permission when prompted, and close any other
 application that has exclusive control of the camera. If the on-device detector cannot download,
-the app reports that face boxes are unavailable but still allows an explicitly approved still to
-be captured.
+the app reports that face boxes are unavailable while keeping live analysis available.
 
 ## Collaboration
 

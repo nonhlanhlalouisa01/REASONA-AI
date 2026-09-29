@@ -1669,8 +1669,7 @@ dialog:focus-visible,
 }
 
 #camera-video,
-#face-overlay,
-#captured-image {
+#face-overlay {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1712,8 +1711,7 @@ dialog:focus-visible,
 }
 
 .camera-placeholder p,
-.camera-message,
-.capture-consent p {
+.camera-message {
   margin: 7px 0 0;
   color: var(--cp-text-muted);
   font-size: 10px;
@@ -1817,38 +1815,6 @@ dialog:focus-visible,
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
-}
-
-.capture-consent {
-  grid-template-columns: minmax(220px, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  margin-top: 12px;
-  padding: 12px;
-  border: 1px solid var(--cp-border);
-  border-radius: var(--radius-control);
-  background: var(--cp-surface-soft);
-}
-
-.capture-consent label {
-  display: grid;
-  grid-template-columns: 18px 1fr;
-  gap: 9px;
-  align-items: start;
-  cursor: pointer;
-  font-size: 10px;
-  line-height: 1.55;
-}
-
-.capture-consent input {
-  width: 16px;
-  height: 16px;
-  margin: 1px 0 0;
-  accent-color: var(--cp-accent);
-}
-
-.capture-consent .vision-primary {
-  justify-self: end;
 }
 
 .vision-result-panel {
@@ -2201,8 +2167,7 @@ dialog:focus-visible,
     aspect-ratio: 4 / 3;
   }
 
-  .live-analysis-control,
-  .capture-consent {
+  .live-analysis-control {
     grid-template-columns: 1fr;
   }
 
@@ -2220,9 +2185,6 @@ dialog:focus-visible,
     justify-items: start;
   }
 
-  .capture-consent .vision-primary {
-    justify-self: start;
-  }
 }
 
 @media print {

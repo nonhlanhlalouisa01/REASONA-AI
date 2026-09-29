@@ -179,7 +179,7 @@ class FoundryAnalysisService:
                 status_code,
             )
             raise AgentUnavailableError(
-                "The Reasona Foundry agent could not analyze the approved still image.",
+                "The Reasona Foundry agent could not analyze the live video frame.",
                 (
                     "Confirm the active agent model supports image input and inspect "
                     "its Foundry trace."
@@ -188,7 +188,7 @@ class FoundryAnalysisService:
         except OpenAIError as exc:
             logger.exception("Microsoft Foundry vision returned an OpenAI client error")
             raise AgentUnavailableError(
-                "The Reasona Foundry agent could not analyze the approved still image.",
+                "The Reasona Foundry agent could not analyze the live video frame.",
                 "Inspect the agent trace in Microsoft Foundry and try again.",
             ) from exc
 

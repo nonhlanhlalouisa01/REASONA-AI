@@ -23,21 +23,15 @@
   const visionDialog = document.querySelector("#vision-dialog");
   const cameraVideo = document.querySelector("#camera-video");
   const faceOverlay = document.querySelector("#face-overlay");
-  const capturedImage = document.querySelector("#captured-image");
   const cameraPlaceholder = document.querySelector("#camera-placeholder");
   const cameraMessage = document.querySelector("#camera-message");
   const faceStatus = document.querySelector("#face-status");
   const startCameraButton = document.querySelector("#start-camera");
-  const captureFrameButton = document.querySelector("#capture-frame");
-  const retakeFrameButton = document.querySelector("#retake-frame");
   const stopCameraButton = document.querySelector("#stop-camera");
   const liveAnalysisConsent = document.querySelector("#live-analysis-consent");
   const toggleLiveAnalysisButton = document.querySelector("#toggle-live-analysis");
   const liveAnalysisStatus = document.querySelector("#live-analysis-status");
   const liveAnalysisIndicator = document.querySelector("#live-analysis-indicator");
-  const captureConsent = document.querySelector("#capture-consent");
-  const visionConsent = document.querySelector("#vision-consent");
-  const analyzeStillButton = document.querySelector("#analyze-still");
   const visionResultEmpty = document.querySelector("#vision-result-empty");
   const visionResultLoading = document.querySelector("#vision-result-loading");
   const visionResultError = document.querySelector("#vision-result-error");
@@ -58,8 +52,6 @@
       detectionPending: false,
       lastDetectionAt: 0,
       faceCount: null,
-      capturedFaceCount: null,
-      imageDataUrl: null,
       contextNote: null,
       latestResult: null,
       liveAnalysisEnabled: false,
@@ -811,7 +803,7 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
         state.camera.detector = null;
         updateFaceStatus(null, "Detector unavailable");
         cameraMessage.textContent =
-          "The camera is still private and capture is available, but live face boxes could not run.";
+          "The live video remains private, but face boxes could not run.";
       } finally {
         state.camera.detectionPending = false;
       }
@@ -831,7 +823,7 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     liveAnalysisStatus.textContent =
       statusMessage ||
       (enabled
-        ? "Live · sending one frame every five seconds"
+        ? "Live · sampling one video frame every second"
         : "Off · no frames are being sent");
   }
 
@@ -858,7 +850,7 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
 
     if (state.camera.liveAnalysisControllers.size >= 3) {
       liveAnalysisStatus.textContent =
-        "Live · Foundry is catching up; the next frame will retry in five seconds";
+        "Live · Foundry is catching up; the next frame will retry in one second";
       return;
     }
 
@@ -897,7 +889,7 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
         });
         setLiveAnalysisUi(
           true,
-          `Live · frame ${sequence} updated ${updatedAt} · sampling every five seconds`,
+          `Live · frame ${sequence} updated ${updatedAt} · sampling every second`,
         );
       }
     } catch (error) {
@@ -933,10 +925,10 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     state.camera.latestVisionSequence = 0;
     setLiveAnalysisUi(true, "Live · preparing the first Foundry observation...");
     runLiveAnalysisCycle();
-    state.camera.liveAnalysisTimer = window.setInterval(runLiveAnalysisCycle, 5000);
+    state.camera.liveAnalysisTimer = window.setInterval(runLiveAnalysisCycle, 1000);
   }
 
-  function stopLiveCamera({ closeDetector = true } = {}) {
+  function stopLiveCamera() {
     stopLiveAnalysis();
     if (state.camera.animationFrame) {
       window.cancelAnimationFrame(state.camera.animationFrame);
@@ -948,40 +940,25 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     state.camera.detectionPending = false;
     clearFaceOverlay();
 
-    if (closeDetector) {
-      state.camera.detector?.close();
-      state.camera.detector = null;
-    }
+    state.camera.detector?.close();
+    state.camera.detector = null;
     toggleLiveAnalysisButton.disabled = true;
-  }
-
-  function resetCapturedStill() {
-    state.camera.imageDataUrl = null;
-    state.camera.capturedFaceCount = null;
-    capturedImage.removeAttribute("src");
-    capturedImage.hidden = true;
-    captureConsent.hidden = true;
-    visionConsent.checked = false;
-    analyzeStillButton.disabled = true;
   }
 
   function resetCameraWorkspace() {
     stopLiveCamera();
-    resetCapturedStill();
     cameraVideo.hidden = true;
     faceOverlay.hidden = true;
     cameraPlaceholder.hidden = false;
     startCameraButton.hidden = false;
     startCameraButton.disabled = false;
-    captureFrameButton.hidden = true;
-    retakeFrameButton.hidden = true;
     stopCameraButton.hidden = true;
     liveAnalysisConsent.checked = false;
     toggleLiveAnalysisButton.disabled = true;
     setLiveAnalysisUi(false);
     updateFaceStatus(null, "Camera off");
     cameraMessage.textContent =
-      "Live frames remain in this browser and are not sent to the server.";
+      "Video frames stay private until live analysis is enabled.";
     clearVisionResult();
   }
 
@@ -995,7 +972,6 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
 
     startCameraButton.disabled = true;
     clearVisionResult();
-    resetCapturedStill();
     cameraMessage.textContent = "Requesting camera permission...";
 
     try {
@@ -1015,7 +991,6 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
       cameraVideo.hidden = false;
       faceOverlay.hidden = false;
       startCameraButton.hidden = true;
-      captureFrameButton.hidden = false;
       stopCameraButton.hidden = false;
       toggleLiveAnalysisButton.disabled = !liveAnalysisConsent.checked;
       updateFaceStatus(null);
@@ -1041,11 +1016,10 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
       cameraPlaceholder.hidden = false;
       startCameraButton.hidden = false;
       stopCameraButton.hidden = true;
-      captureFrameButton.hidden = true;
       updateFaceStatus(null, "Permission needed");
       cameraMessage.textContent =
         error?.name === "NotAllowedError"
-          ? "Camera permission was not granted. No image was captured."
+          ? "Camera permission was not granted. Live video did not start."
           : "The camera could not start. Check that another application is not using it.";
     } finally {
       startCameraButton.disabled = false;
@@ -1073,45 +1047,6 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     context.scale(-1, 1);
     context.drawImage(cameraVideo, 0, 0, targetWidth, targetHeight);
     return captureCanvas.toDataURL("image/jpeg", quality);
-  }
-
-  function captureStill() {
-    const imageDataUrl = captureCurrentFrame({ maxWidth: 1280, quality: 0.84 });
-    if (!imageDataUrl) {
-      cameraMessage.textContent = "Wait for the live camera preview before capturing.";
-      return;
-    }
-
-    state.camera.imageDataUrl = imageDataUrl;
-    state.camera.capturedFaceCount = state.camera.faceCount;
-    capturedImage.src = state.camera.imageDataUrl;
-
-    stopLiveCamera({ closeDetector: false });
-    cameraVideo.hidden = true;
-    faceOverlay.hidden = true;
-    capturedImage.hidden = false;
-    captureFrameButton.hidden = true;
-    stopCameraButton.hidden = true;
-    retakeFrameButton.hidden = false;
-    captureConsent.hidden = false;
-    updateFaceStatus(
-      null,
-      Number.isInteger(state.camera.capturedFaceCount)
-        ? `${state.camera.capturedFaceCount} ${
-            state.camera.capturedFaceCount === 1 ? "face" : "faces"
-          } captured`
-        : "Still captured",
-    );
-    cameraMessage.textContent =
-      "Review the still. It will not leave the browser unless you confirm consent and analyze it.";
-  }
-
-  async function retakeStill() {
-    resetCapturedStill();
-    retakeFrameButton.hidden = true;
-    cameraPlaceholder.hidden = false;
-    updateFaceStatus(null, "Camera off");
-    await startCamera();
   }
 
   function stopCamera() {
@@ -1205,33 +1140,6 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     return payload;
   }
 
-  async function analyzeCapturedStill() {
-    if (!state.camera.imageDataUrl || !visionConsent.checked) return;
-
-    analyzeStillButton.disabled = true;
-    setVisionTab("report");
-    showVisionState(visionResultLoading);
-    try {
-      const payload = await requestVisionAnalysis(
-        state.camera.imageDataUrl,
-        state.camera.capturedFaceCount,
-      );
-      renderVisionAnalysis(payload, { openReport: true });
-    } catch (error) {
-      document.querySelector("#vision-error-message").textContent =
-        typeof error?.message === "string"
-          ? error.message
-          : "Reasona could not analyze this still.";
-      document.querySelector("#vision-error-hint").textContent =
-        typeof error?.hint === "string"
-          ? error.hint
-          : "Check the Foundry connection and try again.";
-      showVisionState(visionResultError);
-    } finally {
-      analyzeStillButton.disabled = !visionConsent.checked;
-    }
-  }
-
   function addVisionContext() {
     if (!state.camera.contextNote) return;
     const prefix = contextInput.value.trim() ? "\n\n" : "";
@@ -1248,7 +1156,7 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     button.textContent = "Added to customer context";
     button.disabled = true;
     cameraMessage.textContent =
-      "A non-sensitive visual note was added. The captured image itself was not added.";
+      "A non-sensitive visual note was added. No video frame was added.";
   }
 
   function downloadVisionReport() {
@@ -1349,8 +1257,6 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     });
   });
   startCameraButton.addEventListener("click", startCamera);
-  captureFrameButton.addEventListener("click", captureStill);
-  retakeFrameButton.addEventListener("click", retakeStill);
   stopCameraButton.addEventListener("click", stopCamera);
   toggleLiveAnalysisButton.addEventListener("click", () => {
     if (state.camera.liveAnalysisEnabled) {
@@ -1366,14 +1272,10 @@ Alex: Agreed. We will send those by Friday and propose dates for a governance wo
     }
     toggleLiveAnalysisButton.disabled = !state.camera.stream;
   });
-  analyzeStillButton.addEventListener("click", analyzeCapturedStill);
   document
     .querySelector("#download-vision-report")
     .addEventListener("click", downloadVisionReport);
   document.querySelector("#use-vision-context").addEventListener("click", addVisionContext);
-  visionConsent.addEventListener("change", () => {
-    analyzeStillButton.disabled = !visionConsent.checked || !state.camera.imageDataUrl;
-  });
   visionDialog.addEventListener("cancel", (event) => {
     event.preventDefault();
     closeCameraDialog();

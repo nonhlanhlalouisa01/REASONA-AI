@@ -151,7 +151,7 @@
                 <path d="M4 8h3l1.5-2h7L17 8h3v11H4z"></path>
                 <circle cx="12" cy="13" r="3.5"></circle>
               </svg>
-              <span>Camera vision</span>
+              <span>Live video</span>
             </button>
             <div class="agent-status" title="Microsoft Foundry agent">
               <span class="agent-status__dot" aria-hidden="true"></span>
@@ -373,8 +373,8 @@
         <header class="vision-dialog__header">
           <div>
             <p class="vision-dialog__eyebrow">Live visual analysis</p>
-            <h2 id="vision-title">Camera vision</h2>
-            <p class="vision-dialog__subtitle">See the camera. Run analysis. Review the report.</p>
+            <h2 id="vision-title">Live video analysis</h2>
+            <p class="vision-dialog__subtitle">Start analysis and watch the report update live.</p>
           </div>
           <button class="dialog-close" id="close-camera" type="button" aria-label="Close camera vision">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -401,7 +401,7 @@
             aria-controls="vision-panel-camera"
             data-vision-tab="camera"
           >
-            Camera
+            Live video
           </button>
           <button
             class="vision-tab"
@@ -427,8 +427,8 @@
           <section class="camera-panel" aria-labelledby="camera-preview-title">
             <div class="camera-panel__heading">
               <div>
-                <p>Camera</p>
-                <h3 id="camera-preview-title">Live preview</h3>
+                <p>Live video</p>
+                <h3 id="camera-preview-title">Video preview</h3>
               </div>
               <span class="face-status" id="face-status">Camera off</span>
             </div>
@@ -436,7 +436,6 @@
             <div class="camera-stage" id="camera-stage">
               <video id="camera-video" autoplay muted playsinline hidden></video>
               <canvas id="face-overlay" hidden></canvas>
-              <img id="captured-image" alt="Approved camera still ready for visual analysis" hidden>
               <div class="camera-placeholder" id="camera-placeholder">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M4 8h3l1.5-2h7L17 8h3v11H4z"></path>
@@ -452,15 +451,9 @@
             </p>
 
             <div class="camera-controls">
-              <button class="vision-primary" id="start-camera" type="button">Start camera</button>
-              <button class="vision-primary" id="capture-frame" type="button" hidden>
-                Capture still
-              </button>
-              <button class="vision-secondary" id="retake-frame" type="button" hidden>
-                Retake
-              </button>
+              <button class="vision-primary" id="start-camera" type="button">Start video</button>
               <button class="vision-secondary" id="stop-camera" type="button" hidden>
-                Stop camera
+                Stop video
               </button>
             </div>
 
@@ -469,12 +462,12 @@
                 <span class="live-analysis-indicator" id="live-analysis-indicator" aria-hidden="true"></span>
                 <div>
                   <strong>Live analysis</strong>
-                  <small>Updates every five seconds</small>
+                  <small>Samples the live video every second</small>
                 </div>
               </div>
               <label>
                 <input id="live-analysis-consent" type="checkbox">
-                <span>I have consent to analyze periodic frames.</span>
+                <span>I have consent to analyze the live video.</span>
               </label>
               <div class="live-analysis-control__actions">
                 <button class="vision-primary" id="toggle-live-analysis" type="button" disabled>
@@ -486,15 +479,6 @@
               </div>
             </div>
 
-            <div class="capture-consent" id="capture-consent" hidden>
-              <label>
-                <input id="vision-consent" type="checkbox">
-                <span>I have consent to analyze this still.</span>
-              </label>
-              <button class="vision-primary" id="analyze-still" type="button" disabled>
-                Analyze still
-              </button>
-            </div>
           </section>
         </div>
 
@@ -513,7 +497,7 @@
               </span>
               <p>Analysis report</p>
               <h3 id="vision-result-title">No analysis yet</h3>
-              <span>Start live analysis or analyze a captured still.</span>
+              <span>Start live analysis to build the report from the video.</span>
             </div>
 
             <div class="vision-result-loading" id="vision-result-loading" hidden aria-live="polite">
@@ -525,7 +509,7 @@
             <div class="vision-result-error" id="vision-result-error" hidden role="alert">
               <span aria-hidden="true">!</span>
               <p>Visual analysis not completed</p>
-              <h3 id="vision-error-message">Reasona could not analyze this still.</h3>
+              <h3 id="vision-error-message">Reasona could not analyze the live video.</h3>
               <small id="vision-error-hint"></small>
             </div>
 

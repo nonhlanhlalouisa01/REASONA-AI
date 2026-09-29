@@ -137,7 +137,7 @@ def vision_response() -> VisionResponse:
                 "One participant is seated centrally with their shoulders visible."
             ],
             head_orientation=["The participant's head is oriented toward the camera."],
-            visible_gestures=["No hand gestures are visible in this still."],
+            visible_gestures=["No hand gestures are visible in this frame."],
             lighting_observations=["Lighting is even across the visible face."],
             visible_context=["The background is uncluttered."],
             practical_suggestions=["Keep the camera near eye level."],
@@ -145,7 +145,7 @@ def vision_response() -> VisionResponse:
                 "Camera check: one participant is clearly framed against an uncluttered background."
             ),
             limitations_note=(
-                "This single still supports framing observations only and does not indicate "
+                "This video frame supports visible observations only and does not indicate "
                 "identity, emotion, attention, or engagement."
             ),
         ),

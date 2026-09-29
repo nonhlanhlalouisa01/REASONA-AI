@@ -46,7 +46,8 @@ def build_vision_prompt(request: VisionRequest) -> str:
         else str(request.detected_face_count)
     )
     return f"""
-You are reviewing one user-approved camera still for practical, non-biometric visual context.
+You are reviewing one user-approved frame sampled from a live video for practical, non-biometric
+visual context.
 The browser's on-device detector reported {local_count} visible face(s). Treat that count as a
 separate fallible observation, not as proof.
 
