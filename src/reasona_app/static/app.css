@@ -9,6 +9,27 @@
   box-sizing: border-box;
 }
 
+.intro h2,
+.section-heading h3,
+.section-heading__number,
+.output-state h4,
+.loading-state h4,
+.error-state h4,
+.mirror-card h4,
+.result-section__heading h4,
+.insight-card h5,
+.prep-hero h4,
+.opening-quote,
+.page-footer p,
+.vision-dialog__header h2,
+.camera-panel__heading h3,
+.vision-result-empty h3,
+.vision-result-loading h3,
+.vision-result-error h3,
+.vision-result h3 {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
 html {
   min-width: 320px;
   background: var(--cp-bg);
@@ -60,6 +81,16 @@ dialog:focus-visible,
 }
 
 .app-rail {
+  --cp-bg-elevated: var(--cp-rail-bg);
+  --cp-text: var(--cp-rail-text);
+  --cp-text-muted: var(--cp-rail-muted);
+  --cp-accent: var(--cp-rail-muted);
+  --cp-accent-fg: var(--cp-rail-bg);
+  --cp-accent-soft: var(--cp-rail-surface);
+  --cp-surface: var(--cp-rail-bg);
+  --cp-surface-soft: var(--cp-rail-surface);
+  --cp-border: var(--cp-rail-border);
+  --cp-border-strong: var(--cp-rail-muted);
   position: sticky;
   top: 0;
   display: flex;
@@ -136,8 +167,9 @@ dialog:focus-visible,
 }
 
 .brand-copy strong {
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 24px;
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: -0.03em;
 }
 
@@ -251,6 +283,7 @@ dialog:focus-visible,
 }
 
 .principle-card p {
+  font-family: Georgia, "Times New Roman", serif;
   position: relative;
   z-index: 1;
   max-width: 190px;
@@ -311,8 +344,9 @@ dialog:focus-visible,
 
 .topbar h1 {
   margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: 23px;
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: -0.02em;
 }
 
@@ -393,7 +427,7 @@ dialog:focus-visible,
   max-width: 720px;
   margin: 0;
   font-size: clamp(34px, 4.2vw, 56px);
-  font-weight: 620;
+  font-weight: 400;
   line-height: 1.04;
   letter-spacing: -0.045em;
 }
