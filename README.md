@@ -1,160 +1,189 @@
-# REASONA-AI
-You presented. They listened. But did it land? REASONA AI turns every customer conversation into your strategy for the next 
-Reasona AI
+# Reasona AI
 
-The psychology behind better customer conversations.
+**Understand the conversation. Understand the human context. Land the message better.**
 
-Reasona AI is a psychology-informed AI engagement assistant designed to help sales and customer-facing teams better understand their customer conversations and adapt the way they communicate.
+Reasona AI is a psychology-informed engagement assistant for sales and customer-facing teams. It
+helps a user prepare for a customer conversation, reflect on authorised meeting evidence, and turn
+what happened into a practical next-conversation playbook.
 
-Most meeting assistants tell you what was said.
+Most meeting assistants tell you what was said. Reasona helps answer a different question:
 
-Reasona AI helps you understand what mattered, why it may have mattered, and how to approach the next conversation differently.
+> Is the conversation you thought you were having the conversation that actually happened?
 
-The Idea
+## MVP capabilities
+
+The interface uses Reasona's forest-green and cream palette with serif headings, plus a
+matching dark theme. Camera controls share the same styling.
 
-Successful customer engagement is not only about having the right solution.
+### Meeting Mirror
 
-It is also about understanding people, communication, trust, decision-making and how information is received.
+Add the intended outcome, customer context, and an authorised transcript. Reasona returns:
 
-A technically perfect presentation can still fail to connect with a customer.
+- the intended conversation compared with the observed conversation;
+- the topic journey, repeated questions, explicit concerns, commitments, and unresolved questions;
+- evidence-backed insights in the form **what happened → evidence → why it may matter → what next**;
+- cautious psychology and communication lenses based on observable patterns; and
+- a Next Conversation Playbook with questions, evidence, follow-ups, and a recommended next step.
 
-Reasona AI brings together conversation analysis, behavioural science, psychology-informed research and customer context to help teams become better communicators and have stronger customer engagements.
+### Conversation Prep
 
-How Reasona AI Works
-Before the Meeting
+Add the next meeting goal, known context, previous notes, and explicit concerns. Reasona returns:
 
-Reasona AI helps you prepare for the customer conversation.
+- likely customer priorities and assumptions to test;
+- a recommended conversation structure and suggested opening;
+- questions to ask and evidence to bring;
+- research to complete and communication watchouts; and
+- clear success outcomes for the meeting.
 
-It brings together available customer context, previous conversations, unresolved questions and relevant research.
+### Camera Vision
 
-It can help identify:
+Open **Camera vision** to:
 
-Customer priorities
-Previous concerns
-Important questions to ask
-Relevant behavioural or communication research
-Topics requiring further research
-A recommended approach for the conversation
+- see a live face count and framing boxes that run in the browser;
+- explicitly enable live Foundry observations, sampled at one current frame every five seconds;
+- capture a still only when the user chooses;
+- require confirmation that visible people agreed before either live or still-image analysis;
+- receive non-biometric observations about face count, framing, lighting, occlusion, and visible
+  meeting context; and
+- add only a safe text note to customer context.
 
-The goal is to enter the meeting understanding not only what you want to say, but how you can communicate it more effectively.
+The live detector does not identify people and does not upload frames. The browser downloads the
+pinned MediaPipe Tasks Vision library from jsDelivr and Google's face-detection model when the
+camera starts; detection then runs locally. If the user separately enables **Start live analysis**,
+the browser sends one current frame to Microsoft Foundry every five seconds until stopped. Live
+analysis stops when consent is withdrawn, the camera workspace closes, or the tab is hidden. A
+captured still is sent only after the user confirms consent and selects
+**Analyze approved still**.
 
-During and After the Conversation
+## Responsible by design
 
-Reasona AI examines authorised meeting information for observable communication patterns.
+Reasona supports human judgement; it does not replace it. The application:
 
-It looks for things such as:
+- uses authorised content supplied by the user;
+- does not persist meeting content or analysis;
+- clears the camera stream and captured still from browser state when the camera workspace closes;
+- treats transcripts and notes as untrusted evidence, not instructions;
+- does not perform face recognition or create biometric templates;
+- does not infer hidden emotions, attention, personality, honesty, intelligence, mental health,
+  demographics, or private intent;
+- labels interpretations cautiously and requires observable evidence; and
+- fails explicitly when the Foundry agent is unavailable or returns an invalid structure.
 
-Questions that repeatedly surfaced
-Areas where additional clarification was requested
-Topics that dominated the conversation
-Explicit concerns
-Changes in the direction of the discussion
-Unresolved questions
-Commitments and follow-ups
+The browser can download a result as JSON or print it, but the app does not create server-side
+meeting history.
 
-It then creates a Meeting Mirror.
+## Architecture
 
-The Meeting Mirror answers a simple question:
+```text
+Browser
+  │
+  ├─ on-device MediaPipe face detection (live frames remain local)
+  │
+  │  JSON over HTTPS (text or one explicitly approved still)
+  ▼
+FastAPI application
+  ├─ Pydantic request and response contracts
+  ├─ evidence-first prompt builder
+  ├─ strict agent-output validation
+  └─ Azure DefaultAzureCredential
+       │
+       ▼
+Microsoft Foundry project
+  └─ prompt agent: reasona-ai (expected version: 2)
+```
 
-“Is the conversation you thought you were having the conversation that actually happened?”
+The backend uses the Microsoft Foundry Projects 2.x SDK and binds an OpenAI Responses client to the
+existing `reasona-ai` prompt agent. Credentials remain server-side.
 
-For example:
+## Local setup
 
-You may have entered a meeting intending to discuss the technology behind an AI solution.
+### Prerequisites
 
-Reasona AI may identify that most of the customer discussion actually centred around:
+- Python 3.11, 3.12, or 3.13 (3.13 recommended)
+- Azure CLI
+- Access to the configured Microsoft Foundry project with the **Foundry User** role
 
-Trust → Employee Impact → Accountability → Governance → Data Protection
+### Install
 
-That difference matters.
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+Copy-Item .env.example .env
+```
 
-The Psychology Layer
+Sign in to the tenant that owns the Foundry project:
 
-This is where Reasona AI becomes different.
+```powershell
+az login
+az account set --subscription 814a28c7-fe56-4bad-94c8-2174c1051fe6
+```
 
-Instead of stopping at conversation analysis, Reasona AI can connect observed communication patterns with relevant research from areas such as:
+No API key is stored in the repository. `DefaultAzureCredential` uses the signed-in Azure CLI
+identity locally and can use a managed identity when hosted on Azure.
 
-Behavioural science
-Communication psychology
-Decision-making
-Technology adoption
-Change management
-Trust
-Organisational behaviour
-Customer engagement
+### Run
 
-The purpose is not to diagnose the customer.
+```powershell
+reasona
+```
 
-The purpose is to help the user understand the human and behavioural context surrounding the conversation.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000), choose **Meeting mirror** or
+**Conversation prep**, and select **Load an example** for a safe demonstration.
 
-Reasona AI can then recommend additional research, evidence or communication approaches to consider before the next engagement.
+### Validate
 
-From Insight to Action
+```powershell
+ruff check .
+pytest
+mypy
+```
 
-Reasona AI turns what it learns into a Next Conversation Playbook.
+## Configuration
 
-It can recommend:
+| Environment variable | Purpose | Default/example |
+|---|---|---|
+| `FOUNDRY_PROJECT_ENDPOINT` | Foundry project endpoint | See `.env.example` |
+| `FOUNDRY_AGENT_NAME` | Existing prompt-agent name | `reasona-ai` |
+| `FOUNDRY_AGENT_VERSION` | Expected active version shown in output metadata | `2` |
+| `FOUNDRY_TIMEOUT_SECONDS` | Per-analysis SDK timeout | `120` |
+| `MAX_TRANSCRIPT_CHARACTERS` | UI transcript limit | `60000` |
+| `MAX_IMAGE_BYTES` | Decoded still-image limit | `4000000` |
 
-What to address first
-What needs further clarification
-Questions to ask next
-Research to complete
-Evidence to bring
-How to simplify a message
-How to restructure the next conversation
-Important follow-ups
-Potential next steps for the opportunity
+The Foundry agent endpoint routes requests by agent name. `FOUNDRY_AGENT_VERSION` documents the
+expected active version and makes drift visible in every downloaded result.
 
-Instead of leaving a meeting thinking:
+## Troubleshooting
 
-“I don't think that landed.”
+### Authentication failed
 
-Reasona AI helps the team understand what happened and what they could do differently next time.
+Run `az login`, select the correct subscription, and confirm the signed-in identity has the
+**Foundry User** role on the project.
 
-Built for Better Customer Engagement
+### Agent endpoint returns 404
 
-Reasona AI is designed for:
+Confirm that `reasona-ai` exists in the configured project, version 2 is active, and the agent
+endpoint has the Responses protocol enabled. The API intentionally returns an explicit
+`agent_unavailable` error rather than substituting mock analysis.
 
-Sales professionals
-Account Executives
-Solution Architects
-Customer Success Managers
-Account Managers
-Consultants
-Business Development teams
-Public Sector engagement teams
+### Agent output could not be validated
 
-Its initial focus is complex public-sector and enterprise engagements, where conversations can involve technology, people, policy, governance, trust and organisational change.
+Inspect the agent trace in Microsoft Foundry. The app rejects malformed or incomplete analysis
+instead of guessing missing evidence.
 
-Responsible by Design
+### Camera does not start
 
-Reasona AI supports human judgement. It does not replace it.
+Use `http://127.0.0.1:8000` or HTTPS, grant camera permission when prompted, and close any other
+application that has exclusive control of the camera. If the on-device detector cannot download,
+the app reports that face boxes are unavailable but still allows an explicitly approved still to
+be captured.
 
-It does not claim to determine someone's hidden emotions, personality, honesty, intelligence or private intentions from a meeting.
+## Collaboration
 
-Instead, Reasona AI focuses on observable conversation evidence and makes the reasoning behind its recommendations transparent.
+Use a feature branch for changes, run the validation commands above, and open a pull request against
+`main`. Do not commit `.env`, tokens, transcripts, customer notes, or generated analysis.
 
-A Reasona insight should clearly show:
+## License
 
-What happened → What evidence supports it → Why it may matter → What you could do next
-
-This keeps the human in control.
-
-The Vision
-
-Reasona AI is built around a simple belief:
-
-Better sales conversations start with better understanding of people.
-
-The goal is not to help teams simply talk more.
-
-It is to help them listen better, understand better and communicate better.
-
-Reasona AI
-
-Understand the conversation. Understand the human context. Land the message better.
-
-
-
-
-
+This project is licensed under the GNU General Public License v3.0. See [LICENSE](./LICENSE).
