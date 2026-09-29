@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Reasona AI helps customer-facing teams understand what mattered and prepare for what comes next."
+    >
+    <title>Reasona AI | Land the message better</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
+    <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+  </head>
+  <body
+    data-agent-name="{{ agent_name }}"
+    data-agent-version="{{ agent_version }}"
+    data-max-transcript-characters="{{ max_transcript_characters }}"
+  >
+    <div class="app-shell">
+      <aside class="app-rail" aria-label="Reasona workspace">
+        <a class="brand" href="/" aria-label="Reasona AI home">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <span class="brand-copy">
+            <strong>Reasona</strong>
+            <small>Conversation intelligence</small>
+          </span>
+        </a>
+
+        <nav class="mode-nav" aria-label="Analysis mode">
+          <button class="mode-nav__item is-active" type="button" data-mode="reflect">
+            <span class="mode-nav__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 5.5h16v11H8l-4 3v-14Z"></path>
+                <path d="M8 9h8M8 12.5h5"></path>
+              </svg>
+            </span>
+            <span>
+              <strong>Meeting mirror</strong>
+              <small>Understand what landed</small>
+            </span>
+          </button>
+          <button class="mode-nav__item" type="button" data-mode="prepare">
+            <span class="mode-nav__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 3 4.5 7v5c0 4.7 3.2 7.7 7.5 9 4.3-1.3 7.5-4.3 7.5-9V7L12 3Z"></path>
+                <path d="m9 12 2 2 4-4"></path>
+              </svg>
+            </span>
+            <span>
+              <strong>Conversation prep</strong>
+              <small>Plan the next engagement</small>
+            </span>
+          </button>
+        </nav>
+
+        <div class="rail-spacer"></div>
+
+        <section class="principle-card">
+          <span class="principle-card__eyebrow">Responsible by design</span>
+          <p>Observable evidence, transparent reasoning, human judgement.</p>
+          <div class="principle-card__line" aria-hidden="true"></div>
+        </section>
+
+        <p class="rail-footer">No meeting content is stored by this application.</p>
+      </aside>
+
+      <main class="main-canvas">
+        <header class="topbar">
+          <div>
+            <p class="topbar__context">Customer engagement workspace</p>
+            <h1 id="page-title">Meeting mirror</h1>
+          </div>
+          <div class="agent-status" title="Microsoft Foundry agent">
+            <span class="agent-status__dot" aria-hidden="true"></span>
+            <span>{{ agent_name }}</span>
+            <span class="agent-status__version">v{{ agent_version }}</span>
+          </div>
+        </header>
+
+        <section class="intro">
+          <div class="intro__copy">
+            <p class="eyebrow" id="mode-eyebrow">After the conversation</p>
+            <h2 id="mode-heading">Did the conversation you planned actually happen?</h2>
+            <p id="mode-description">
+              Bring the objective and authorised transcript. Reasona will surface observable
+              patterns, show the evidence, and turn them into a practical next-conversation playbook.
+            </p>
+          </div>
+          <div class="evidence-chain" aria-label="Reasona insight structure">
+            <span>What happened</span>
+            <i aria-hidden="true"></i>
+            <span>Evidence</span>
+            <i aria-hidden="true"></i>
+            <span>Why it may matter</span>
+            <i aria-hidden="true"></i>
+            <span>What next</span>
+          </div>
+        </section>
+
+        <div class="workspace">
+          <section class="input-card" aria-labelledby="input-card-title">
+            <div class="section-heading">
+              <div>
+                <span class="section-heading__number">01</span>
+                <div>
+                  <p class="section-heading__eyebrow">Conversation evidence</p>
+                  <h3 id="input-card-title">Add the meeting context</h3>
+                </div>
+              </div>
+              <button class="text-button" type="button" id="load-example">Load an example</button>
+            </div>
+
+            <form id="analysis-form" novalidate>
+              <div class="field">
+                <label for="meeting-title">Meeting name</label>
+                <input
+                  id="meeting-title"
+                  name="meetingTitle"
+                  type="text"
+                  maxlength="120"
+                  placeholder="e.g. AI adoption discovery"
+                  autocomplete="off"
+                  required
+                >
+              </div>
+
+              <div class="field">
+                <label for="meeting-goal" id="goal-label">What did you want the meeting to achieve?</label>
+                <textarea
+                  id="meeting-goal"
+                  name="meetingGoal"
+                  rows="3"
+                  maxlength="1500"
+                  placeholder="Describe the conversation you intended to have and the outcome you hoped for."
+                  required
+                ></textarea>
+              </div>
+
+              <div class="field">
+                <div class="field__label-row">
+                  <label for="customer-context" id="context-label">Customer context <span>Optional</span></label>
+                  <span class="field__hint">Only include information you are authorised to use</span>
+                </div>
+                <textarea
+                  id="customer-context"
+                  name="customerContext"
+                  rows="3"
+                  maxlength="8000"
+                  placeholder="Known priorities, organisational context, previous concerns..."
+                ></textarea>
+              </div>
+
+              <div id="reflect-fields">
+                <div class="field">
+                  <div class="field__label-row">
+                    <label for="transcript">Meeting transcript</label>
+                    <span class="character-count" id="transcript-count">0 / {{ max_transcript_characters }}</span>
+                  </div>
+                  <textarea
+                    id="transcript"
+                    name="transcript"
+                    class="transcript-input"
+                    rows="15"
+                    maxlength="{{ max_transcript_characters }}"
+                    placeholder="Paste an authorised transcript here. Speaker labels improve the quality of the evidence."
+                  ></textarea>
+                </div>
+              </div>
+
+              <div id="prepare-fields" hidden>
+                <div class="field">
+                  <label for="previous-notes">Previous conversation notes <span>Optional</span></label>
+                  <textarea
+                    id="previous-notes"
+                    name="previousNotes"
+                    rows="6"
+                    maxlength="20000"
+                    placeholder="Questions, decisions, commitments, or excerpts from previous conversations..."
+                  ></textarea>
+                </div>
+                <div class="field">
+                  <label for="known-concerns">Known concerns <span>Optional</span></label>
+                  <textarea
+                    id="known-concerns"
+                    name="knownConcerns"
+                    rows="3"
+                    maxlength="8000"
+                    placeholder="Concerns the customer has explicitly raised or areas that still need clarification..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="consent-note">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3 5 6v5c0 4.4 2.8 7.5 7 9 4.2-1.5 7-4.6 7-9V6l-7-3Z"></path>
+                  <path d="M9.5 11.5 11 13l3.5-3.5"></path>
+                </svg>
+                <p>
+                  Use authorised material only. Reasona supports your judgement; it does not diagnose
+                  people or infer hidden emotions and intentions.
+                </p>
+              </div>
+
+              <button class="primary-action" id="submit-analysis" type="submit">
+                <span id="submit-label">Create meeting mirror</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14M14 7l5 5-5 5"></path>
+                </svg>
+              </button>
+            </form>
+          </section>
+
+          <section class="output-card" id="output-card" aria-labelledby="output-card-title">
+            <div class="section-heading">
+              <div>
+                <span class="section-heading__number">02</span>
+                <div>
+                  <p class="section-heading__eyebrow">Reasona analysis</p>
+                  <h3 id="output-card-title">See what mattered</h3>
+                </div>
+              </div>
+              <div class="result-actions" id="result-actions" hidden>
+                <button class="icon-button" type="button" id="download-result" title="Download JSON">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3v12M7 10l5 5 5-5M5 20h14"></path>
+                  </svg>
+                  <span class="sr-only">Download result as JSON</span>
+                </button>
+                <button class="icon-button" type="button" id="print-result" title="Print playbook">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 8V4h10v4M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"></path>
+                    <path d="M7 14h10v7H7z"></path>
+                  </svg>
+                  <span class="sr-only">Print result</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="output-state" id="empty-state">
+              <div class="signal-orbit" aria-hidden="true">
+                <span class="signal-orbit__core"></span>
+                <span class="signal-orbit__ring signal-orbit__ring--one"></span>
+                <span class="signal-orbit__ring signal-orbit__ring--two"></span>
+                <span class="signal-orbit__point signal-orbit__point--one"></span>
+                <span class="signal-orbit__point signal-orbit__point--two"></span>
+                <span class="signal-orbit__point signal-orbit__point--three"></span>
+              </div>
+              <h4 id="empty-title">Your meeting mirror will appear here</h4>
+              <p id="empty-copy">
+                Reasona will compare intention with evidence, identify communication patterns,
+                and build a practical playbook for the next conversation.
+              </p>
+              <div class="output-preview">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+
+            <div class="loading-state" id="loading-state" hidden aria-live="polite">
+              <div class="thinking-mark" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <p class="loading-state__eyebrow">Reading the conversation</p>
+              <h4 id="loading-message">Separating evidence from interpretation...</h4>
+              <div class="loading-progress"><span></span></div>
+              <p class="loading-state__note">This can take a minute when the transcript is long.</p>
+            </div>
+
+            <div class="error-state" id="error-state" hidden role="alert">
+              <div class="error-state__icon" aria-hidden="true">!</div>
+              <p class="error-state__eyebrow">Analysis not completed</p>
+              <h4 id="error-message">Reasona could not complete this analysis.</h4>
+              <p id="error-hint"></p>
+              <button class="secondary-action" type="button" id="retry-analysis">Try again</button>
+            </div>
+
+            <article class="analysis-result" id="analysis-result" hidden tabindex="-1" aria-live="polite"></article>
+          </section>
+        </div>
+
+        <footer class="page-footer">
+          <p>Understand the conversation. Understand the human context. Land the message better.</p>
+          <span>Reasona AI · Human judgement stays in control</span>
+        </footer>
+      </main>
+    </div>
+  </body>
+</html>
+
